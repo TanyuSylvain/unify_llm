@@ -29,6 +29,30 @@
         .header h1 {
             font-size: 1.5rem;
             font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        .model-selector {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .model-selector label {
+            font-size: 0.9rem;
+        }
+        .model-selector select {
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.5rem;
+            border: 1px solid #444;
+            background: #2a2a4e;
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            outline: none;
+        }
+        .model-selector select:hover {
+            background: #3a3a5e;
         }
         .chat-container {
             flex: 1;
@@ -194,6 +218,15 @@
 <body>
     <div class="header">
         <h1>LangGraph Agent Chat</h1>
+        <div class="model-selector">
+            <label for="modelSelect">Model:</label>
+            <select id="modelSelect">
+                <option value="mistral">Mistral Large</option>
+                <option value="qwen3-max">Qwen3 Max</option>
+                <option value="glm-4.7">GLM-4.7</option>
+                <option value="minimax-m2.1">MiniMax M2.1</option>
+            </select>
+        </div>
     </div>
     <div class="chat-container">
         <div class="messages" id="messages"></div>
@@ -208,6 +241,7 @@
         const messagesDiv = document.getElementById('messages');
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
+        const modelSelect = document.getElementById('modelSelect');
 
         // Generate and store conversation ID
         let conversationId = generateUUID();
@@ -237,6 +271,8 @@
             const message = messageInput.value.trim();
             if (!message) return;
 
+            const selectedModel = modelSelect.value;
+
             addMessage(message, 'user');
             messageInput.value = '';
             sendBtn.disabled = true;
@@ -250,7 +286,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         message: message,
-                        conversation_id: conversationId
+                        conversation_id: conversationId,
+                        model: selectedModel
                     })
                 });
 

@@ -28,16 +28,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize the agent (singleton)
-agent: Optional[LangGraphAgent] = None
+# Initialize agents (one per model)
+agents: dict[str, LangGraphAgent] = {}
 
 
-def get_agent() -> LangGraphAgent:
-    """Get or initialize the agent singleton."""
-    global agent
-    if agent is None:
-        agent = LangGraphAgent()
-    return agent
+def get_agent(model_name: str = "mistral") -> LangGraphAgent:
+    """Get or initialize the agent for the specified model."""
+    global agents
+    if model_name not in agents:
+        agents[model_name] = LangGraphAgent(model_name=model_name)
+    return agents[model_name]
 
 
 # Request/Response models
@@ -45,6 +45,7 @@ class ChatRequest(BaseModel):
     """Request model for chat endpoint."""
     message: str
     conversation_id: Optional[str] = None
+    model: Optional[str] = "mistral"
 
 
 class ChatResponse(BaseModel):
@@ -71,7 +72,7 @@ async def chat(request: ChatRequest):
     Send a message and get a complete response.
 
     Args:
-        request: ChatRequest with message and optional conversation_id
+        request: ChatRequest with message, optional conversation_id, and optional model
 
     Returns:
         ChatResponse with the agent's response
@@ -80,7 +81,8 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 
     try:
-        agent_instance = get_agent()
+        model_name = request.model or "mistral"
+        agent_instance = get_agent(model_name)
         conversation_id = request.conversation_id or str(uuid.uuid4())
         response = agent_instance.invoke(request.message, conversation_id)
 
@@ -98,7 +100,7 @@ async def chat_stream(request: ChatRequest):
     Send a message and get a streaming response.
 
     Args:
-        request: ChatRequest with message and optional conversation_id
+        request: ChatRequest with message, optional conversation_id, and optional model
 
     Returns:
         StreamingResponse with chunks of the agent's response
@@ -107,11 +109,12 @@ async def chat_stream(request: ChatRequest):
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 
     conversation_id = request.conversation_id or str(uuid.uuid4())
+    model_name = request.model or "mistral"
 
     async def generate():
         """Generate streaming response chunks."""
         try:
-            agent_instance = get_agent()
+            agent_instance = get_agent(model_name)
             for chunk in agent_instance.stream(request.message, conversation_id):
                 yield chunk
         except Exception as e:

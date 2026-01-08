@@ -2,6 +2,7 @@ import os
 from typing import TypedDict, Annotated
 from dotenv import load_dotenv
 from langchain_mistralai import ChatMistralAI
+from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 
@@ -15,27 +16,87 @@ class AgentState(TypedDict):
 
 
 class LangGraphAgent:
-    """LangGraph agent that uses devstral-2 model for streaming responses."""
+    """LangGraph agent that supports multiple LLM models."""
 
-    def __init__(self):
-        """Initialize the agent with devstral-2 model."""
-        api_key = os.getenv("MISTRAL_API_KEY")
-        if not api_key:
-            raise ValueError("MISTRAL_API_KEY not found in environment variables")
+    SUPPORTED_MODELS = {
+        "mistral": "mistral-large-latest",
+        "qwen3-max": "qwen3-max",
+        "glm-4.7": "glm-4.7",
+        "minimax-m2.1": "MiniMax-M2.1"
+    }
 
-        # Initialize the LLM with devstral-2 model
-        self.llm = ChatMistralAI(
-            model="mistral-large-latest",  # Using mistral-large-latest
-            api_key=api_key,
-            temperature=0.7,
-            streaming=True
-        )
+    def __init__(self, model_name: str = "mistral"):
+        """Initialize the agent with specified model.
+
+        Args:
+            model_name: Name of the model to use (mistral, qwen3-max, glm-4.7, minimax-m2.1)
+        """
+        if model_name not in self.SUPPORTED_MODELS:
+            raise ValueError(f"Unsupported model: {model_name}. Supported models: {list(self.SUPPORTED_MODELS.keys())}")
+
+        self.model_name = model_name
+        self.llm = self._initialize_llm(model_name)
 
         # Build the graph
         self.graph = self._build_graph()
 
         # Store conversation history per conversation_id
         self.conversations = {}
+
+    def _initialize_llm(self, model_name: str):
+        """Initialize the appropriate LLM based on model name."""
+        if model_name == "mistral":
+            api_key = os.getenv("MISTRAL_API_KEY")
+            if not api_key:
+                raise ValueError("MISTRAL_API_KEY not found in environment variables")
+            return ChatMistralAI(
+                model=self.SUPPORTED_MODELS[model_name],
+                api_key=api_key,
+                temperature=0.7,
+                streaming=True
+            )
+
+        elif model_name == "qwen3-max":
+            api_key = os.getenv("QWEN_API_KEY") or os.getenv("DASHSCOPE_API_KEY")
+            base_url = os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+            if not api_key:
+                raise ValueError("QWEN_API_KEY or DASHSCOPE_API_KEY not found in environment variables")
+            return ChatOpenAI(
+                model=self.SUPPORTED_MODELS[model_name],
+                api_key=api_key,
+                base_url=base_url,
+                temperature=0.7,
+                streaming=True
+            )
+
+        elif model_name == "glm-4.7":
+            api_key = os.getenv("GLM_API_KEY") or os.getenv("ZHIPUAI_API_KEY")
+            base_url = os.getenv("GLM_BASE_URL", "https://open.bigmodel.cn/api/paas/v4")
+            if not api_key:
+                raise ValueError("GLM_API_KEY or ZHIPUAI_API_KEY not found in environment variables")
+            return ChatOpenAI(
+                model=self.SUPPORTED_MODELS[model_name],
+                api_key=api_key,
+                base_url=base_url,
+                temperature=0.7,
+                streaming=True
+            )
+
+        elif model_name == "minimax-m2.1":
+            api_key = os.getenv("MINIMAX_API_KEY")
+            base_url = os.getenv("MINIMAX_BASE_URL", "https://api.minimax.chat/v1")
+            if not api_key:
+                raise ValueError("MINIMAX_API_KEY not found in environment variables")
+            return ChatOpenAI(
+                model=self.SUPPORTED_MODELS[model_name],
+                api_key=api_key,
+                base_url=base_url,
+                temperature=0.7,
+                streaming=True
+            )
+
+        else:
+            raise ValueError(f"Unsupported model: {model_name}")
 
     def _build_graph(self):
         """Build the LangGraph workflow."""
