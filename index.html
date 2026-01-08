@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LangGraph Agent Chat</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: #1a1a2e;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+        .chat-container {
+            flex: 1;
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .message {
+            max-width: 80%;
+            padding: 0.75rem 1rem;
+            border-radius: 1rem;
+            line-height: 1.5;
+        }
+        .message.user {
+            align-self: flex-end;
+            background: #1a1a2e;
+            color: white;
+            border-bottom-right-radius: 0.25rem;
+        }
+        .message.assistant {
+            align-self: flex-start;
+            background: #e9ecef;
+            color: #333;
+            border-bottom-left-radius: 0.25rem;
+        }
+        .message.error {
+            background: #fee;
+            color: #c00;
+        }
+        .message.assistant pre {
+            background: #f4f4f4;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin: 0.5rem 0;
+        }
+        .message.assistant code {
+            background: #f4f4f4;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .message.assistant pre code {
+            background: none;
+            padding: 0;
+        }
+        .message.assistant ul, .message.assistant ol {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+        .message.assistant p {
+            margin: 0.5rem 0;
+        }
+        .message.assistant p:first-child {
+            margin-top: 0;
+        }
+        .message.assistant p:last-child {
+            margin-bottom: 0;
+        }
+        .message.assistant blockquote {
+            border-left: 3px solid #ddd;
+            padding-left: 1rem;
+            margin: 0.5rem 0;
+            color: #666;
+        }
+        .message.assistant h1, .message.assistant h2, .message.assistant h3 {
+            margin: 0.75rem 0 0.5rem 0;
+        }
+        .message.assistant h1:first-child, .message.assistant h2:first-child, .message.assistant h3:first-child {
+            margin-top: 0;
+        }
+        .input-container {
+            padding: 1rem;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 0.5rem;
+        }
+        #messageInput {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid #ddd;
+            border-radius: 1.5rem;
+            font-size: 1rem;
+            outline: none;
+        }
+        #messageInput:focus {
+            border-color: #1a1a2e;
+        }
+        #sendBtn {
+            padding: 0.75rem 1.5rem;
+            background: #1a1a2e;
+            color: white;
+            border: none;
+            border-radius: 1.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        #sendBtn:hover {
+            background: #2a2a4e;
+        }
+        #sendBtn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .typing {
+            display: inline-block;
+        }
+        .typing::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>LangGraph Agent Chat</h1>
+    </div>
+    <div class="chat-container">
+        <div class="messages" id="messages"></div>
+        <div class="input-container">
+            <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off">
+            <button id="sendBtn">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        const messagesDiv = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        // Generate and store conversation ID
+        let conversationId = generateUUID();
+
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        function addMessage(content, type) {
+            const msg = document.createElement('div');
+            msg.className = `message ${type}`;
+            if (type === 'assistant' && content) {
+                msg.innerHTML = marked.parse(content);
+            } else {
+                msg.textContent = content;
+            }
+            messagesDiv.appendChild(msg);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            return msg;
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            addMessage(message, 'user');
+            messageInput.value = '';
+            sendBtn.disabled = true;
+
+            const assistantMsg = addMessage('', 'assistant');
+            assistantMsg.innerHTML = '<span class="typing">Thinking</span>';
+
+            try {
+                const response = await fetch(`${API_URL}/chat/stream`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        conversation_id: conversationId
+                    })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Request failed');
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullText = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    fullText += decoder.decode(value, { stream: true });
+                    assistantMsg.innerHTML = marked.parse(fullText);
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                }
+            } catch (error) {
+                assistantMsg.textContent = `Error: ${error.message}`;
+                assistantMsg.classList.add('error');
+            }
+
+            sendBtn.disabled = false;
+            messageInput.focus();
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        messageInput.focus();
+    </script>
+</body>
+</html>
