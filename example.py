@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
 """
 Example usage script for the LangGraph agent.
+
+This script demonstrates the refactored backend with multiple provider support.
 """
 
-from agent import LangGraphAgent
+import asyncio
+from backend.core.agent import LangGraphAgent
+from backend.config import settings
 
 
-def main():
+async def main():
     """Run example queries with streaming output."""
 
-    # Initialize the agent
+    # Initialize the agent with default model
     print("Initializing LangGraph Agent...")
-    agent = LangGraphAgent()
+    print(f"Using model: {settings.default_model}")
+    agent = LangGraphAgent(model_id=settings.default_model)
     print("Agent initialized successfully!\n")
 
     # Example questions
@@ -29,7 +34,7 @@ def main():
         print("\nStreaming response:\n")
 
         # Stream the response
-        for chunk in agent.stream(question):
+        async for chunk in agent.stream(question):
             print(chunk, end="", flush=True)
 
         print("\n")
@@ -39,16 +44,18 @@ def main():
     print("=" * 60)
 
 
-def interactive_mode():
+async def interactive_mode():
     """Run the agent in interactive mode."""
 
     print("=" * 60)
     print("LangGraph Agent - Interactive Mode")
     print("=" * 60)
-    print("Type 'exit' or 'quit' to stop\n")
+    print(f"Using model: {settings.default_model}")
+    print("Type 'exit' or 'quit' to stop")
+    print("Type 'models' to list available models\n")
 
     # Initialize the agent
-    agent = LangGraphAgent()
+    agent = LangGraphAgent(model_id=settings.default_model)
 
     while True:
         # Get user input
@@ -59,13 +66,22 @@ def interactive_mode():
             print("Goodbye!")
             break
 
+        # Check for models command
+        if question.lower() == 'models':
+            from backend.providers import ProviderFactory
+            models = ProviderFactory.list_all_models()
+            print("\nAvailable models:")
+            for model in models:
+                print(f"  - {model['model_id']} ({model['provider_name']})")
+            continue
+
         if not question:
             print("Please enter a question.")
             continue
 
         # Stream the response
         print("\nAgent: ", end="", flush=True)
-        for chunk in agent.stream(question):
+        async for chunk in agent.stream(question):
             print(chunk, end="", flush=True)
         print()
 
@@ -75,6 +91,6 @@ if __name__ == "__main__":
 
     # Check if interactive mode is requested
     if len(sys.argv) > 1 and sys.argv[1] == "--interactive":
-        interactive_mode()
+        asyncio.run(interactive_mode())
     else:
-        main()
+        asyncio.run(main())

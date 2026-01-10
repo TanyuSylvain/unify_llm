@@ -1,0 +1,20 @@
+"""
+API routes module.
+"""
+
+from fastapi import APIRouter
+from .health import router as health_router
+from .chat import router as chat_router
+from .models import router as models_router
+from .conversations import router as conversations_router
+
+# Create main API router
+api_router = APIRouter()
+
+# Include all route modules
+api_router.include_router(health_router)
+api_router.include_router(chat_router)
+api_router.include_router(models_router)
+api_router.include_router(conversations_router)
+
+__all__ = ["api_router"]

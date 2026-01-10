@@ -1,75 +1,71 @@
-# LangGraph Agent with Streaming Support
+# LLM GUI - Multi-Provider Chat Application
 
-A LangGraph-based agent that uses the Mistral devstral-2 model to answer questions with streaming responses.
+A flexible, multi-provider LLM chat application built with LangGraph, FastAPI, and a clean web interface. Switch between different LLM providers and models seamlessly with streaming responses.
 
-## Features
+## ✨ Features
 
-- Streaming responses for real-time output
-- Built with LangGraph for flexible workflow management
-- Uses Mistral's devstral-2 (mistral-large-2) model
-- Interactive and batch processing modes
+- **Multiple LLM Providers**: Mistral, Qwen, GLM (Zhipu), MiniMax
+- **16+ Models**: Multiple model options for each provider
+- **Streaming Responses**: Real-time output for better UX
+- **Clean Architecture**: Modular, extensible codebase
+- **Web Interface**: Simple, responsive chat UI with markdown support
+- **REST API**: Full-featured API with OpenAPI documentation
+- **Conversation Management**: Save and retrieve conversation history
+- **CLI Tools**: Interactive and batch processing modes
 
-## Setup
+## 🚀 Quick Start
 
-1. Install dependencies:
+### 1. Install Dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Set up your Mistral API key:
+### 2. Configure API Keys
+
+Edit the `.env` file with your API keys
+
+### 3. Start the Server
+
 ```bash
-cp .env.example .env
-# Edit .env and add your MISTRAL_API_KEY
+python -m backend.main
 ```
 
-3. Get your API key from [Mistral AI](https://console.mistral.ai/)
+The API will be available at `http://localhost:8000`
 
-## Usage
+### 4. Open the Web Interface
 
-### Basic Example
-Run the example script with predefined questions:
+Open `index.html` in your browser and start chatting!
+
+## 📚 Usage
+
+### Web Interface
+
+1. Open `index.html` in a browser
+2. Select your preferred model from the dropdown
+3. Type your message and press Send or Enter
+
+### CLI Examples
+
 ```bash
-python example.py
+python example.py                  # Batch mode
+python example.py --interactive    # Interactive mode
 ```
 
-### Interactive Mode
-Chat with the agent interactively:
-```bash
-python example.py --interactive
-```
+## 🎯 Available Models
 
-### Use in Your Code
-```python
-from agent import LangGraphAgent
+- **Mistral AI**: 4 models (mistral-large-latest, mistral-medium-latest, etc.)
+- **Alibaba Qwen**: 4 models (qwen-max, qwen-plus, qwen-turbo, qwen-long)
+- **Zhipu GLM**: 4 models (glm-4-plus, glm-4-air, glm-4-airx, glm-4-flash)
+- **MiniMax**: 4 models (abab6.5s-chat, abab6.5-chat, etc.)
 
-# Initialize the agent
-agent = LangGraphAgent()
+## 🔌 API Endpoints
 
-# Stream responses
-for chunk in agent.stream("What is LangGraph?"):
-    print(chunk, end="", flush=True)
+Full API documentation at `http://localhost:8000/docs`
 
-# Or get complete response
-response = agent.invoke("Explain AI agents")
-print(response)
-```
+- `GET /health` - Health check
+- `GET /models/` - List all models
+- `POST /chat/stream` - Streaming chat
+- `GET /conversations` - List conversations
 
-## Project Structure
-
-- `agent.py` - Main LangGraph agent implementation
-- `example.py` - Example usage scripts (batch and interactive modes)
-- `requirements.txt` - Python dependencies
-- `.env.example` - Environment variable template
-
-## How It Works
-
-1. The agent is built using LangGraph's StateGraph
-2. Messages are managed with LangGraph's message handling
-3. The Mistral LLM streams responses chunk by chunk
-4. Each chunk is yielded in real-time for immediate display
-
-## Requirements
-
-- Python 3.8+
-- Mistral API key
-- Internet connection for API calls
+See [MIGRATION.md](MIGRATION.md) for detailed documentation.
