@@ -14,25 +14,15 @@ class GLMProvider(BaseLLMProvider):
         """Return available GLM models."""
         return [
             {
-                "id": "glm-4-plus",
-                "name": "GLM-4 Plus",
+                "id": "glm-4.7",
+                "name": "GLM 4.7",
                 "description": "Enhanced GLM-4 with improved capabilities"
             },
             {
-                "id": "glm-4-air",
-                "name": "GLM-4 Air",
+                "id": "glm-4.6",
+                "name": "GLM 4.6",
                 "description": "Balanced performance and efficiency"
             },
-            {
-                "id": "glm-4-airx",
-                "name": "GLM-4 AirX",
-                "description": "Extended context version of GLM-4 Air"
-            },
-            {
-                "id": "glm-4-flash",
-                "name": "GLM-4 Flash",
-                "description": "Fast inference for real-time applications"
-            }
         ]
 
     def get_provider_name(self) -> str:

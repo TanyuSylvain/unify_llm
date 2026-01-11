@@ -14,25 +14,10 @@ class MiniMaxProvider(BaseLLMProvider):
         """Return available MiniMax models."""
         return [
             {
-                "id": "abab6.5s-chat",
-                "name": "MiniMax 6.5S",
+                "id": "MiniMax-M2.1",
+                "name": "MiniMax-M2.1",
                 "description": "Latest generation model with superior performance"
             },
-            {
-                "id": "abab6.5-chat",
-                "name": "MiniMax 6.5",
-                "description": "Balanced model for general tasks"
-            },
-            {
-                "id": "abab5.5s-chat",
-                "name": "MiniMax 5.5S",
-                "description": "Stable and reliable model"
-            },
-            {
-                "id": "abab5.5-chat",
-                "name": "MiniMax 5.5",
-                "description": "Cost-effective for routine tasks"
-            }
         ]
 
     def get_provider_name(self) -> str:

@@ -28,11 +28,6 @@ class MistralProvider(BaseLLMProvider):
                 "name": "Mistral Small",
                 "description": "Fast and efficient for simpler tasks"
             },
-            {
-                "id": "open-mistral-nemo",
-                "name": "Mistral Nemo",
-                "description": "Open-source model with Apache 2.0 license"
-            }
         ]
 
     def get_provider_name(self) -> str:

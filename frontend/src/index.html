@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM GUI - Multi-Provider Chat</title>
+
+    <!-- External Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>LLM GUI - Multi-Provider Chat</h1>
+        <div class="model-selector">
+            <label for="modelSelect">Model:</label>
+            <select id="modelSelect">
+                <option>Loading...</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Chat Container -->
+    <div class="chat-container">
+        <div class="messages" id="messages"></div>
+        <div class="input-container">
+            <input
+                type="text"
+                id="messageInput"
+                placeholder="Type your message..."
+                autocomplete="off"
+            >
+            <button id="sendBtn">Send</button>
+        </div>
+    </div>
+
+    <!-- Application Scripts (ES6 Modules) -->
+    <script type="module">
+        import { ChatApp } from './app.js';
+
+        // Initialize app when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            window.chatApp = new ChatApp();
+        });
+
+        // Expose app to console for debugging
+        window.getChatApp = () => window.chatApp;
+    </script>
+</body>
+</html>

@@ -14,25 +14,15 @@ class QwenProvider(BaseLLMProvider):
         """Return available Qwen models."""
         return [
             {
-                "id": "qwen-max",
-                "name": "Qwen Max",
+                "id": "qwen3-max",
+                "name": "Qwen3 Max",
                 "description": "Most capable Qwen model for complex reasoning"
             },
             {
-                "id": "qwen-plus",
-                "name": "Qwen Plus",
+                "id": "qwen3-plus",
+                "name": "Qwen3 Plus",
                 "description": "Enhanced performance with good balance"
             },
-            {
-                "id": "qwen-turbo",
-                "name": "Qwen Turbo",
-                "description": "Fast and cost-effective for most tasks"
-            },
-            {
-                "id": "qwen-long",
-                "name": "Qwen Long",
-                "description": "Optimized for long context processing"
-            }
         ]
 
     def get_provider_name(self) -> str:
