@@ -103,19 +103,20 @@ class LangGraphAgent:
 
         # Stream the response
         full_response = ""
-        for chunk in self.llm.stream(messages):
-            if hasattr(chunk, 'content'):
-                full_response += chunk.content
-                yield chunk.content
-
-        # Add assistant response to storage
-        if conversation_id:
-            await self.storage.add_message(
-                conversation_id=conversation_id,
-                role="assistant",
-                content=full_response,
-                model=self.model_id
-            )
+        try:
+            for chunk in self.llm.stream(messages):
+                if hasattr(chunk, 'content'):
+                    full_response += chunk.content
+                    yield chunk.content
+        finally:
+            # ALWAYS save the response, even if streaming was interrupted
+            if conversation_id and full_response:
+                await self.storage.add_message(
+                    conversation_id=conversation_id,
+                    role="assistant",
+                    content=full_response,
+                    model=self.model_id
+                )
 
     async def invoke(self, question: str, conversation_id: str = None) -> str:
         """
