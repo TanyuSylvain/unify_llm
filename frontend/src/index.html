@@ -21,11 +21,20 @@
             <!-- Header -->
             <div class="header">
                 <h1>LLM GUI - Multi-Provider Chat</h1>
-                <div class="model-selector">
-                    <label for="modelSelect">Model:</label>
-                    <select id="modelSelect">
-                        <option>Loading...</option>
-                    </select>
+                <div class="controls">
+                    <div class="model-selector">
+                        <label for="modelSelect">Model:</label>
+                        <select id="modelSelect">
+                            <option>Loading...</option>
+                        </select>
+                    </div>
+                    <div class="thinking-toggle">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="thinkingToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label">Thinking</span>
+                    </div>
                 </div>
             </div>
 

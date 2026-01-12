@@ -38,7 +38,7 @@ class MistralProvider(BaseLLMProvider):
         """Mistral supports streaming."""
         return True
 
-    def initialize(self, model_id: str, api_key: str, temperature: float = 0.7, **kwargs):
+    def initialize(self, model_id: str, api_key: str, temperature: float = 0.7, thinking: bool = False, **kwargs):
         """
         Initialize Mistral LLM client.
 
@@ -46,6 +46,7 @@ class MistralProvider(BaseLLMProvider):
             model_id: Mistral model ID (e.g., 'mistral-large-latest')
             api_key: Mistral API key
             temperature: Sampling temperature (default: 0.7)
+            thinking: Enable thinking mode (not supported, ignored)
             **kwargs: Additional configuration (unused)
 
         Returns:

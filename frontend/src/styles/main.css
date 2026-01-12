@@ -177,13 +177,19 @@ body {
     margin-bottom: 0.5rem;
 }
 
+/* Controls Container */
+.controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+}
+
 /* Model Selector */
 .model-selector {
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 0.5rem;
-    margin-top: 0.5rem;
 }
 
 .model-selector label {
@@ -203,6 +209,77 @@ body {
 
 .model-selector select:hover {
     background: #3a3a5e;
+}
+
+/* Thinking Toggle */
+.thinking-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.toggle-label {
+    font-size: 0.9rem;
+    color: #aaa;
+    transition: color 0.2s;
+}
+
+.thinking-toggle.disabled .toggle-label {
+    color: #666;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #3a3a5e;
+    transition: 0.3s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: #4a9eff;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+.toggle-switch input:disabled + .toggle-slider {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.toggle-switch input:disabled {
+    cursor: not-allowed;
 }
 
 /* Chat Container */

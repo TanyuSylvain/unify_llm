@@ -84,7 +84,8 @@ class ProviderFactory:
             "name": provider.get_provider_name(),
             "provider_id": provider_name,
             "models": provider.get_available_models(),
-            "supports_streaming": provider.supports_streaming()
+            "supports_streaming": provider.supports_streaming(),
+            "supports_thinking": provider.supports_thinking()
         }
 
     @staticmethod
@@ -100,7 +101,8 @@ class ProviderFactory:
                     "provider_name": "Mistral AI",
                     "model_id": "mistral-large-latest",
                     "model_name": "Mistral Large",
-                    "description": "..."
+                    "description": "...",
+                    "supports_thinking": false
                 },
                 ...
             ]
@@ -116,7 +118,8 @@ class ProviderFactory:
                     "provider_name": provider.get_provider_name(),
                     "model_id": model["id"],
                     "model_name": model["name"],
-                    "description": model["description"]
+                    "description": model["description"],
+                    "supports_thinking": provider.supports_thinking()
                 })
 
         return result

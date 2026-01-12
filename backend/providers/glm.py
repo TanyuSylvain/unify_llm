@@ -33,7 +33,11 @@ class GLMProvider(BaseLLMProvider):
         """GLM supports streaming."""
         return True
 
-    def initialize(self, model_id: str, api_key: str, temperature: float = 0.7, **kwargs):
+    def supports_thinking(self) -> bool:
+        """GLM models support thinking mode."""
+        return True
+
+    def initialize(self, model_id: str, api_key: str, temperature: float = 0.7, thinking: bool = False, **kwargs):
         """
         Initialize GLM LLM client.
 
@@ -41,6 +45,7 @@ class GLMProvider(BaseLLMProvider):
             model_id: GLM model ID (e.g., 'glm-4-plus')
             api_key: Zhipu AI API key
             temperature: Sampling temperature (default: 0.7)
+            thinking: Enable thinking mode (default: False)
             **kwargs: Additional configuration (e.g., base_url)
 
         Returns:
@@ -51,10 +56,18 @@ class GLMProvider(BaseLLMProvider):
 
         base_url = kwargs.get("base_url", "https://open.bigmodel.cn/api/paas/v4")
 
+        # Build extra_body for thinking mode
+        extra_body = {}
+        if thinking:
+            extra_body["thinking_type"] = "enable"
+        else:
+            extra_body["thinking_type"] = "disable"
+
         return ChatOpenAI(
             model=validated_model,
             api_key=validated_key,
             base_url=base_url,
             temperature=temperature,
-            streaming=True
+            streaming=True,
+            extra_body=extra_body
         )

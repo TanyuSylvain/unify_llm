@@ -11,13 +11,15 @@ class ChatRequest(BaseModel):
     message: str = Field(..., description="User's message", min_length=1)
     conversation_id: Optional[str] = Field(None, description="Optional conversation ID for multi-turn chat")
     model: Optional[str] = Field(None, description="Model ID to use (e.g., 'mistral-large-latest')")
+    thinking: Optional[bool] = Field(None, description="Enable thinking mode for models that support it")
 
     class Config:
         json_schema_extra = {
             "example": {
                 "message": "What is machine learning?",
                 "conversation_id": "conv-123",
-                "model": "mistral-large-latest"
+                "model": "mistral-large-latest",
+                "thinking": False
             }
         }
 
@@ -59,6 +61,7 @@ class ModelInfo(BaseModel):
     model_id: str = Field(..., description="Model ID")
     model_name: str = Field(..., description="Model display name")
     description: str = Field(..., description="Model description")
+    supports_thinking: bool = Field(False, description="Whether thinking mode can be enabled")
 
 
 class ModelsResponse(BaseModel):

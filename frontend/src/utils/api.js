@@ -81,18 +81,24 @@ export class APIClient {
      * @param {string} conversationId - Conversation ID
      * @param {string} modelId - Model ID to use
      * @param {Function} onChunk - Callback for each chunk
+     * @param {boolean} thinking - Enable thinking mode
      * @returns {Promise<void>}
      */
-    async streamMessage(message, conversationId, modelId, onChunk) {
+    async streamMessage(message, conversationId, modelId, onChunk, thinking = false) {
         try {
+            const body = {
+                message,
+                conversation_id: conversationId,
+                model: modelId
+            };
+            if (thinking !== null && thinking !== undefined) {
+                body.thinking = thinking;
+            }
+
             const response = await fetch(`${this.baseURL}/chat/stream`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message,
-                    conversation_id: conversationId,
-                    model: modelId
-                })
+                body: JSON.stringify(body)
             });
 
             if (!response.ok) {

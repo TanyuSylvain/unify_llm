@@ -33,7 +33,7 @@ class QwenProvider(BaseLLMProvider):
         """Qwen supports streaming."""
         return True
 
-    def initialize(self, model_id: str, api_key: str, temperature: float = 0.7, **kwargs):
+    def initialize(self, model_id: str, api_key: str, temperature: float = 0.7, thinking: bool = False, **kwargs):
         """
         Initialize Qwen LLM client.
 
@@ -41,6 +41,7 @@ class QwenProvider(BaseLLMProvider):
             model_id: Qwen model ID (e.g., 'qwen-max')
             api_key: Qwen/DashScope API key
             temperature: Sampling temperature (default: 0.7)
+            thinking: Enable thinking mode (not supported, ignored)
             **kwargs: Additional configuration (e.g., base_url)
 
         Returns:

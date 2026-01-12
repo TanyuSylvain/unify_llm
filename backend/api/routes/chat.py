@@ -16,29 +16,34 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 # Shared storage instance for all agents
 _storage = MemoryStorage()
 
-# Agent pool (one per model)
+# Agent pool (keyed by model_id + thinking mode)
 _agents: dict[str, LangGraphAgent] = {}
 
 
-def get_agent(model_id: str) -> LangGraphAgent:
+def get_agent(model_id: str, thinking: bool = False) -> LangGraphAgent:
     """
-    Get or create an agent instance for the specified model.
+    Get or create an agent instance for the specified model and thinking mode.
 
     Args:
         model_id: Model ID to use
+        thinking: Whether thinking mode is enabled
 
     Returns:
         LangGraphAgent instance
     """
     global _agents, _storage
 
-    if model_id not in _agents:
-        _agents[model_id] = LangGraphAgent(
+    # Key includes thinking mode since it affects the agent behavior
+    agent_key = f"{model_id}:{thinking}"
+
+    if agent_key not in _agents:
+        _agents[agent_key] = LangGraphAgent(
             model_id=model_id,
-            storage=_storage
+            storage=_storage,
+            thinking=thinking
         )
 
-    return _agents[model_id]
+    return _agents[agent_key]
 
 
 @router.post("/", response_model=ChatResponse)
@@ -57,7 +62,8 @@ async def chat(request: ChatRequest):
 
     try:
         model_id = request.model or settings.default_model
-        agent = get_agent(model_id)
+        thinking = request.thinking if request.thinking is not None else False
+        agent = get_agent(model_id, thinking)
         conversation_id = request.conversation_id or str(uuid.uuid4())
 
         response = await agent.invoke(request.message, conversation_id)
@@ -87,11 +93,12 @@ async def chat_stream(request: ChatRequest):
 
     conversation_id = request.conversation_id or str(uuid.uuid4())
     model_id = request.model or settings.default_model
+    thinking = request.thinking if request.thinking is not None else False
 
     async def generate():
         """Generate streaming response chunks."""
         try:
-            agent = get_agent(model_id)
+            agent = get_agent(model_id, thinking)
             async for chunk in agent.stream(request.message, conversation_id):
                 yield chunk
         except Exception as e:

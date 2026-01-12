@@ -27,7 +27,7 @@ class BaseLLMProvider(ABC):
         pass
 
     @abstractmethod
-    def initialize(self, model_id: str, api_key: str, temperature: float = 0.7, **kwargs):
+    def initialize(self, model_id: str, api_key: str, temperature: float = 0.7, thinking: bool = False, **kwargs):
         """
         Initialize and return the LLM client for a specific model.
 
@@ -35,6 +35,7 @@ class BaseLLMProvider(ABC):
             model_id: Specific model ID to use
             api_key: API key for the provider
             temperature: Sampling temperature (default: 0.7)
+            thinking: Enable thinking mode (default: False)
             **kwargs: Additional provider-specific configuration
 
         Returns:
@@ -51,6 +52,15 @@ class BaseLLMProvider(ABC):
     def get_provider_name(self) -> str:
         """Return the human-readable provider name."""
         pass
+
+    def supports_thinking(self) -> bool:
+        """
+        Check if this provider/model supports thinking mode.
+
+        Returns:
+            True if thinking mode can be enabled/disabled, False otherwise
+        """
+        return False
 
     def validate_api_key(self, api_key: Optional[str]) -> str:
         """

@@ -19,16 +19,18 @@ export class ChatApp {
         this.messageInput = document.getElementById('messageInput');
         this.sendBtn = document.getElementById('sendBtn');
         this.modelSelectElement = document.getElementById('modelSelect');
+        this.thinkingToggle = document.getElementById('thinkingToggle');
         this.sidebarElement = document.getElementById('sidebar');
 
         // Verify all required elements exist
         if (!this.messagesContainer || !this.messageInput || !this.sendBtn ||
-            !this.modelSelectElement || !this.sidebarElement) {
+            !this.modelSelectElement || !this.thinkingToggle || !this.sidebarElement) {
             console.error('Missing required DOM elements:', {
                 messages: !!this.messagesContainer,
                 input: !!this.messageInput,
                 sendBtn: !!this.sendBtn,
                 modelSelect: !!this.modelSelectElement,
+                thinkingToggle: !!this.thinkingToggle,
                 sidebar: !!this.sidebarElement
             });
             throw new Error('Failed to find required DOM elements');
@@ -47,6 +49,7 @@ export class ChatApp {
         // Conversation state
         this.conversationId = this.loadOrCreateConversationId();
         this.isProcessing = false;
+        this.isThinkingEnabled = false;
 
         // Initialize the app
         this.initialize();
@@ -97,15 +100,54 @@ export class ChatApp {
             }
         });
 
-        // Model change
+        // Model change - update thinking toggle state
         this.modelSelector.onChange((modelId) => {
             setStorage('selectedModel', modelId);
+            this.updateThinkingToggleState();
+        });
+
+        // Thinking toggle change
+        this.thinkingToggle.addEventListener('change', (e) => {
+            this.isThinkingEnabled = e.target.checked;
+            setStorage('thinkingEnabled', this.isThinkingEnabled);
         });
 
         // Load saved model selection
         const savedModel = getStorage('selectedModel');
         if (savedModel) {
             this.modelSelector.setSelectedModel(savedModel);
+        }
+
+        // Load saved thinking preference
+        const savedThinking = getStorage('thinkingEnabled');
+        if (savedThinking !== null) {
+            this.isThinkingEnabled = savedThinking === 'true' || savedThinking === true;
+            this.thinkingToggle.checked = this.isThinkingEnabled;
+        }
+
+        // Initial update of thinking toggle state
+        this.updateThinkingToggleState();
+    }
+
+    /**
+     * Update thinking toggle enabled/disabled state based on selected model
+     */
+    updateThinkingToggleState() {
+        const modelInfo = this.modelSelector.getSelectedModelInfo();
+        console.log('Model info:', modelInfo);
+        const supportsThinking = modelInfo && modelInfo.supports_thinking;
+        console.log('Supports thinking:', supportsThinking);
+
+        this.thinkingToggle.disabled = !supportsThinking;
+        const toggleContainer = this.thinkingToggle.closest('.thinking-toggle');
+
+        if (supportsThinking) {
+            toggleContainer.classList.remove('disabled');
+        } else {
+            toggleContainer.classList.add('disabled');
+            // Reset thinking state when switching to unsupported model
+            this.isThinkingEnabled = false;
+            this.thinkingToggle.checked = false;
         }
     }
 
@@ -176,13 +218,15 @@ export class ChatApp {
                 this.conversationId,
                 modelId,
                 (chunk) => {
+                    // Accumulate response
                     fullResponse += chunk;
                     this.messageComponent.updateMessage(
                         typingIndicator,
                         fullResponse,
                         true // render as markdown
                     );
-                }
+                },
+                this.isThinkingEnabled
             );
 
             // Refresh the sidebar to update the conversation title and timestamp

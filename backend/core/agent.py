@@ -23,7 +23,8 @@ class LangGraphAgent:
         model_id: str,
         provider_name: Optional[str] = None,
         storage: Optional[ConversationStorage] = None,
-        temperature: float = None
+        temperature: float = None,
+        thinking: bool = False
     ):
         """
         Initialize the agent with specified model and storage.
@@ -33,15 +34,18 @@ class LangGraphAgent:
             provider_name: Optional provider name (auto-detected if not provided)
             storage: Storage backend (defaults to MemoryStorage)
             temperature: Sampling temperature (defaults to config setting)
+            thinking: Enable thinking mode for models that support it
         """
         self.model_id = model_id
         self.provider_name = provider_name
+        self.thinking = thinking
 
         # Initialize LLM using factory
         self.llm = ProviderFactory.create_llm(
             model_id=model_id,
             provider_name=provider_name,
-            temperature=temperature
+            temperature=temperature,
+            thinking=thinking
         )
 
         # Initialize storage
@@ -114,8 +118,10 @@ class LangGraphAgent:
         try:
             for chunk in self.llm.stream(messages):
                 if hasattr(chunk, 'content'):
-                    full_response += chunk.content
-                    yield chunk.content
+                    content = chunk.content
+                    if content:
+                        full_response += content
+                        yield content
         finally:
             # ALWAYS save the response, even if streaming was interrupted
             if conversation_id and full_response:
