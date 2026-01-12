@@ -126,3 +126,31 @@ class ConversationStorage(ABC):
             True if exists, False otherwise
         """
         pass
+
+    @abstractmethod
+    async def update_conversation_title(
+        self,
+        conversation_id: str,
+        title: str
+    ) -> bool:
+        """
+        Update the title of a conversation.
+
+        Args:
+            conversation_id: Unique conversation identifier
+            title: New title for the conversation
+
+        Returns:
+            True if updated, False if not found
+        """
+        pass
+
+    @abstractmethod
+    async def delete_all_conversations(self) -> int:
+        """
+        Delete all conversations and their messages.
+
+        Returns:
+            Number of conversations deleted
+        """
+        pass

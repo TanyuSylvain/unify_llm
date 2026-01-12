@@ -117,6 +117,27 @@ export class APIClient {
     }
 
     /**
+     * Get conversation info (metadata only)
+     * @param {string} conversationId - Conversation ID
+     * @returns {Promise<Object|null>} Conversation info or null if not found
+     */
+    async getConversationInfo(conversationId) {
+        try {
+            const response = await fetch(`${this.baseURL}/conversations/${conversationId}/info`);
+            if (!response.ok) {
+                if (response.status === 404) {
+                    return null;
+                }
+                throw new Error(`Failed to fetch conversation info: ${response.statusText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching conversation info:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Get conversation history
      * @param {string} conversationId - Conversation ID
      * @returns {Promise<Object>} Conversation history
@@ -171,6 +192,25 @@ export class APIClient {
             return await response.json();
         } catch (error) {
             console.error('Error deleting conversation:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete all conversations
+     * @returns {Promise<Object>} Deletion result
+     */
+    async deleteAllConversations() {
+        try {
+            const response = await fetch(`${this.baseURL}/conversations`, {
+                method: 'DELETE'
+            });
+            if (!response.ok) {
+                throw new Error(`Failed to delete all conversations: ${response.statusText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error deleting all conversations:', error);
             throw error;
         }
     }

@@ -12,29 +12,37 @@
     <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
-    <!-- Header -->
-    <div class="header">
-        <h1>LLM GUI - Multi-Provider Chat</h1>
-        <div class="model-selector">
-            <label for="modelSelect">Model:</label>
-            <select id="modelSelect">
-                <option>Loading...</option>
-            </select>
-        </div>
-    </div>
+    <div class="app-container">
+        <!-- Sidebar (content managed by Sidebar.js) -->
+        <aside class="sidebar" id="sidebar"></aside>
 
-    <!-- Chat Container -->
-    <div class="chat-container">
-        <div class="messages" id="messages"></div>
-        <div class="input-container">
-            <input
-                type="text"
-                id="messageInput"
-                placeholder="Type your message..."
-                autocomplete="off"
-            >
-            <button id="sendBtn">Send</button>
-        </div>
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <h1>LLM GUI - Multi-Provider Chat</h1>
+                <div class="model-selector">
+                    <label for="modelSelect">Model:</label>
+                    <select id="modelSelect">
+                        <option>Loading...</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Chat Container -->
+            <div class="chat-container">
+                <div class="messages" id="messages"></div>
+                <div class="input-container">
+                    <input
+                        type="text"
+                        id="messageInput"
+                        placeholder="Type your message..."
+                        autocomplete="off"
+                    >
+                    <button id="sendBtn">Send</button>
+                </div>
+            </div>
+        </main>
     </div>
 
     <!-- Application Scripts (ES6 Modules) -->

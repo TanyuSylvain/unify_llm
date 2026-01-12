@@ -84,7 +84,10 @@ class LangGraphAgent:
         """
         # Get conversation history
         history = []
+        is_new_conversation = False
         if conversation_id:
+            conversation = await self.storage.get_conversation(conversation_id)
+            is_new_conversation = conversation is None
             messages = await self.storage.get_messages(conversation_id)
             history = [{"role": msg["role"], "content": msg["content"]} for msg in messages]
 
@@ -96,6 +99,11 @@ class LangGraphAgent:
                 content=question,
                 model=self.model_id
             )
+            # Set title from first message if this is a new conversation
+            if is_new_conversation:
+                # Truncate title to 50 characters max
+                title = question[:50] + "..." if len(question) > 50 else question
+                await self.storage.update_conversation_title(conversation_id, title)
 
         # Build messages with history
         messages = history.copy()
@@ -131,7 +139,10 @@ class LangGraphAgent:
         """
         # Get conversation history
         history = []
+        is_new_conversation = False
         if conversation_id:
+            conversation = await self.storage.get_conversation(conversation_id)
+            is_new_conversation = conversation is None
             messages = await self.storage.get_messages(conversation_id)
             history = [{"role": msg["role"], "content": msg["content"]} for msg in messages]
 
@@ -143,6 +154,11 @@ class LangGraphAgent:
                 content=question,
                 model=self.model_id
             )
+            # Set title from first message if this is a new conversation
+            if is_new_conversation:
+                # Truncate title to 50 characters max
+                title = question[:50] + "..." if len(question) > 50 else question
+                await self.storage.update_conversation_title(conversation_id, title)
 
         # Build initial state with history
         messages = history.copy()

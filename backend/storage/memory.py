@@ -42,7 +42,7 @@ class MemoryStorage(ConversationStorage):
         message = {
             "role": role,
             "content": content,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now().isoformat()
         }
         if model and role == "assistant":
             message["model"] = model
@@ -50,14 +50,15 @@ class MemoryStorage(ConversationStorage):
         self._messages[conversation_id].append(message)
 
         # Update conversation metadata
-        self._conversations[conversation_id]["updated_at"] = datetime.utcnow().isoformat()
+        self._conversations[conversation_id]["updated_at"] = datetime.now().isoformat()
         self._conversations[conversation_id]["message_count"] = len(self._messages[conversation_id])
 
     async def create_conversation(
         self,
         conversation_id: str,
         model: str,
-        metadata: Optional[Dict] = None
+        metadata: Optional[Dict] = None,
+        title: Optional[str] = None
     ) -> None:
         """Create a new conversation."""
         if conversation_id in self._conversations:
@@ -66,10 +67,11 @@ class MemoryStorage(ConversationStorage):
         self._conversations[conversation_id] = {
             "id": conversation_id,
             "model": model,
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
             "message_count": 0,
-            "metadata": metadata or {}
+            "metadata": metadata or {},
+            "title": title or "New Conversation"
         }
         self._messages[conversation_id] = []
 
@@ -98,6 +100,26 @@ class MemoryStorage(ConversationStorage):
     async def conversation_exists(self, conversation_id: str) -> bool:
         """Check if a conversation exists."""
         return conversation_id in self._conversations
+
+    async def update_conversation_title(
+        self,
+        conversation_id: str,
+        title: str
+    ) -> bool:
+        """Update the title of a conversation."""
+        if conversation_id not in self._conversations:
+            return False
+
+        self._conversations[conversation_id]["title"] = title
+        self._conversations[conversation_id]["updated_at"] = datetime.now().isoformat()
+        return True
+
+    async def delete_all_conversations(self) -> int:
+        """Delete all conversations and their messages."""
+        count = len(self._conversations)
+        self._conversations.clear()
+        self._messages.clear()
+        return count
 
     def clear_all(self) -> None:
         """Clear all conversations (useful for testing)."""

@@ -82,6 +82,7 @@ class ConversationInfo(BaseModel):
     created_at: str = Field(..., description="Creation timestamp")
     updated_at: str = Field(..., description="Last update timestamp")
     message_count: int = Field(..., description="Number of messages")
+    title: str = Field(..., description="Conversation title")
 
 
 class ConversationsResponse(BaseModel):

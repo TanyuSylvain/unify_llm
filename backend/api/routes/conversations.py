@@ -82,6 +82,18 @@ async def delete_conversation(conversation_id: str):
     return {"message": f"Conversation {conversation_id} deleted successfully"}
 
 
+@router.delete("/")
+async def delete_all_conversations():
+    """
+    Delete all conversations and their messages.
+
+    Returns:
+        Success message with count of deleted conversations
+    """
+    count = await _storage.delete_all_conversations()
+    return {"message": f"Deleted {count} conversation(s)"}
+
+
 @router.get("/{conversation_id}/info", response_model=ConversationInfo)
 async def get_conversation_info(conversation_id: str):
     """

@@ -7,6 +7,7 @@ import { APIClient } from './utils/api.js';
 import { generateUUID, getStorage, setStorage } from './utils/helpers.js';
 import { MessageComponent } from './components/MessageComponent.js';
 import { ModelSelector } from './components/ModelSelector.js';
+import { Sidebar } from './components/Sidebar.js';
 
 export class ChatApp {
     constructor() {
@@ -18,10 +19,30 @@ export class ChatApp {
         this.messageInput = document.getElementById('messageInput');
         this.sendBtn = document.getElementById('sendBtn');
         this.modelSelectElement = document.getElementById('modelSelect');
+        this.sidebarElement = document.getElementById('sidebar');
+
+        // Verify all required elements exist
+        if (!this.messagesContainer || !this.messageInput || !this.sendBtn ||
+            !this.modelSelectElement || !this.sidebarElement) {
+            console.error('Missing required DOM elements:', {
+                messages: !!this.messagesContainer,
+                input: !!this.messageInput,
+                sendBtn: !!this.sendBtn,
+                modelSelect: !!this.modelSelectElement,
+                sidebar: !!this.sidebarElement
+            });
+            throw new Error('Failed to find required DOM elements');
+        }
 
         // Initialize components
         this.messageComponent = new MessageComponent(this.messagesContainer);
         this.modelSelector = new ModelSelector(this.modelSelectElement, this.apiClient);
+        this.sidebar = new Sidebar(
+            this.sidebarElement,
+            this.apiClient,
+            (conversationId) => this.selectConversation(conversationId),
+            () => this.createNewConversation()
+        );
 
         // Conversation state
         this.conversationId = this.loadOrCreateConversationId();
@@ -39,6 +60,12 @@ export class ChatApp {
             // Initialize model selector (fetches models from API)
             await this.modelSelector.initialize();
 
+            // Load conversations list
+            await this.sidebar.loadConversations();
+
+            // Set current conversation in sidebar
+            this.sidebar.setCurrentConversation(this.conversationId);
+
             // Set up event listeners
             this.setupEventListeners();
 
@@ -47,8 +74,6 @@ export class ChatApp {
 
             // Focus input
             this.messageInput.focus();
-
-            console.log('Chat app initialized successfully');
         } catch (error) {
             console.error('Failed to initialize app:', error);
             this.messageComponent.addErrorMessage(
@@ -74,7 +99,6 @@ export class ChatApp {
 
         // Model change
         this.modelSelector.onChange((modelId) => {
-            console.log('Model changed to:', modelId);
             setStorage('selectedModel', modelId);
         });
 
@@ -103,13 +127,21 @@ export class ChatApp {
      */
     async loadConversationHistory() {
         try {
+            // First check if conversation exists (avoids 404 errors after backend restart)
+            const conversationInfo = await this.apiClient.getConversationInfo(this.conversationId);
+            if (!conversationInfo) {
+                console.log('No existing conversation history (new conversation)');
+                return;
+            }
+
+            // Load the full history if conversation exists
             const history = await this.apiClient.getConversationHistory(this.conversationId);
             if (history && history.messages && history.messages.length > 0) {
                 this.messageComponent.loadMessages(history.messages);
             }
         } catch (error) {
-            // Conversation doesn't exist yet, that's okay
-            console.log('No existing conversation history');
+            // Something went wrong, but we can still continue
+            console.log('Could not load conversation history:', error.message);
         }
     }
 
@@ -153,6 +185,10 @@ export class ChatApp {
                 }
             );
 
+            // Refresh the sidebar to update the conversation title and timestamp
+            await this.sidebar.loadConversations();
+            this.sidebar.setCurrentConversation(this.conversationId);
+
         } catch (error) {
             console.error('Error sending message:', error);
             this.messageComponent.removeTypingIndicator(typingIndicator);
@@ -163,6 +199,35 @@ export class ChatApp {
             this.setProcessing(false);
             this.messageInput.focus();
         }
+    }
+
+    /**
+     * Select an existing conversation
+     */
+    async selectConversation(conversationId) {
+        if (conversationId === this.conversationId) return;
+
+        this.conversationId = conversationId;
+        setStorage('conversationId', conversationId);
+        this.sidebar.setCurrentConversation(conversationId);
+
+        // Clear and load the selected conversation
+        this.messageComponent.clearMessages();
+        await this.loadConversationHistory();
+
+        console.log('Switched to conversation:', conversationId);
+    }
+
+    /**
+     * Create a new conversation
+     */
+    createNewConversation() {
+        this.conversationId = generateUUID();
+        setStorage('conversationId', this.conversationId);
+        this.sidebar.setCurrentConversation(this.conversationId);
+        this.messageComponent.clearMessages();
+
+        console.log('Created new conversation:', this.conversationId);
     }
 
     /**
@@ -186,24 +251,16 @@ export class ChatApp {
             this.messageComponent.clearMessages();
 
             // Create new conversation
-            this.conversationId = generateUUID();
-            setStorage('conversationId', this.conversationId);
+            this.createNewConversation();
+
+            // Refresh the sidebar
+            await this.sidebar.loadConversations();
 
             console.log('Conversation cleared');
         } catch (error) {
             console.error('Error clearing conversation:', error);
             this.messageComponent.addErrorMessage('Failed to clear conversation');
         }
-    }
-
-    /**
-     * Start new conversation
-     */
-    newConversation() {
-        this.messageComponent.clearMessages();
-        this.conversationId = generateUUID();
-        setStorage('conversationId', this.conversationId);
-        console.log('Started new conversation:', this.conversationId);
     }
 
     /**
