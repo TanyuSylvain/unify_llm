@@ -1,6 +1,6 @@
 /**
  * Markdown Renderer
- * Handles rendering markdown content with syntax highlighting
+ * Handles rendering markdown content with syntax highlighting and math equations
  */
 
 export class MarkdownRenderer {
@@ -13,6 +13,9 @@ export class MarkdownRenderer {
             this.markedAvailable = true;
             this.configureMarked();
         }
+
+        // Check if KaTeX is available
+        this.katexAvailable = typeof katex !== 'undefined';
     }
 
     /**
@@ -37,17 +40,112 @@ export class MarkdownRenderer {
     render(markdown) {
         if (!markdown) return '';
 
-        if (this.markedAvailable) {
-            try {
-                return marked.parse(markdown);
-            } catch (error) {
-                console.error('Error parsing markdown:', error);
-                return this.escapeHtml(markdown);
-            }
+        // Process math BEFORE markdown parsing to protect math content
+        let mathPlaceholders = null;
+        if (this.katexAvailable) {
+            const result = this.preProcessMath(markdown);
+            markdown = result.text;
+            mathPlaceholders = result.placeholders;
         }
 
-        // Fallback: basic markdown rendering
-        return this.basicMarkdownRender(markdown);
+        let html;
+        if (this.markedAvailable) {
+            try {
+                html = marked.parse(markdown);
+            } catch (error) {
+                console.error('Error parsing markdown:', error);
+                html = this.escapeHtml(markdown);
+            }
+        } else {
+            // Fallback: basic markdown rendering
+            html = this.basicMarkdownRender(markdown);
+        }
+
+        // Restore math placeholders
+        if (mathPlaceholders) {
+            html = this.restoreMathPlaceholders(html, mathPlaceholders);
+        }
+
+        return html;
+    }
+
+    /**
+     * Pre-process math by replacing math delimiters with protected placeholders
+     * This prevents marked.js from processing HTML inside math expressions
+     * @param {string} text - Markdown text
+     * @returns {string} Object with processed text and placeholders
+     */
+    preProcessMath(text) {
+        if (!this.katexAvailable) return { text, placeholders: null };
+
+        const displayMath = [];
+        const inlineMath = [];
+
+        // Use unique delimiters that marked.js won't touch
+        // Using a format that won't be interpreted as markdown
+        const startDelim = '\x00KATEX';
+        const endDelim = 'KATEX\x00';
+
+        // Protect display math $$...$$ first
+        text = text.replace(/\$\$([\s\S]*?)\$\$/g, (match, math) => {
+            // Decode HTML entities
+            math = this.decodeHtmlEntities(math);
+            try {
+                const rendered = katex.renderToString(math.trim(), {
+                    displayMode: true,
+                    throwOnError: false
+                });
+                const placeholder = `${startDelim}DISPLAY${displayMath.length}${endDelim}`;
+                displayMath.push(rendered);
+                return placeholder;
+            } catch (e) {
+                return match;
+            }
+        });
+
+        // Protect inline math $...$ (but not already processed)
+        text = text.replace(/\$([^$\n]+?)\$/g, (match, math) => {
+            // Decode HTML entities
+            math = this.decodeHtmlEntities(math);
+            try {
+                const rendered = katex.renderToString(math.trim(), {
+                    displayMode: false,
+                    throwOnError: false
+                });
+                const placeholder = `${startDelim}INLINE${inlineMath.length}${endDelim}`;
+                inlineMath.push(rendered);
+                return placeholder;
+            } catch (e) {
+                return match;
+            }
+        });
+
+        return {
+            text,
+            placeholders: { display: displayMath, inline: inlineMath, start: startDelim, end: endDelim }
+        };
+    }
+
+    /**
+     * Restore math placeholders with rendered KaTeX HTML
+     * @param {string} html - HTML with placeholders
+     * @param {object} placeholders - Object containing display and inline math arrays
+     * @returns {string} HTML with math restored
+     */
+    restoreMathPlaceholders(html, placeholders) {
+        const { display, inline, start, end } = placeholders;
+
+        // Restore display math placeholders
+        display.forEach((rendered, i) => {
+            html = html.replace(`${start}DISPLAY${i}${end}`, rendered);
+        });
+
+        // Restore inline math placeholders
+        inline.forEach((rendered, i) => {
+            html = html.replace(`${start}INLINE${i}${end}`, rendered);
+        });
+
+        return html;
     }
 
     /**
@@ -90,6 +188,25 @@ export class MarkdownRenderer {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    /**
+     * Decode HTML entities (e.g., &#39; -> ')
+     * @param {string} text - Text with HTML entities
+     * @returns {string} Decoded text
+     */
+    decodeHtmlEntities(text) {
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = text;
+        return textarea.value;
+    }
+
+    /**
+     * Check if KaTeX is available
+     * @returns {boolean} KaTeX availability
+     */
+    isKatexAvailable() {
+        return this.katexAvailable;
     }
 
     /**

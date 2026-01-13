@@ -436,6 +436,27 @@ body {
     font-weight: 600;
 }
 
+/* KaTeX Math Rendering */
+.message.assistant .katex {
+    font-size: 1.1em;
+}
+
+.message.assistant .katex-display {
+    margin: 0.5rem 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.25rem 0;
+}
+
+.message.assistant .katex-display > .katex {
+    display: inline-block;
+}
+
+/* Ensure math doesn't overflow message bubble */
+.message.assistant {
+    overflow: hidden;
+}
+
 /* Input Container */
 .input-container {
     padding: 1rem;
