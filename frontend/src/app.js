@@ -20,11 +20,12 @@ export class ChatApp {
         this.sendBtn = document.getElementById('sendBtn');
         this.modelSelectElement = document.getElementById('modelSelect');
         this.thinkingToggle = document.getElementById('thinkingToggle');
+        this.markdownToggle = document.getElementById('markdownToggle');
         this.sidebarElement = document.getElementById('sidebar');
 
         // Verify all required elements exist
         if (!this.messagesContainer || !this.messageInput || !this.sendBtn ||
-            !this.modelSelectElement || !this.thinkingToggle || !this.sidebarElement) {
+            !this.modelSelectElement || !this.thinkingToggle || !this.markdownToggle || !this.sidebarElement) {
             console.error('Missing required DOM elements:', {
                 messages: !!this.messagesContainer,
                 input: !!this.messageInput,
@@ -50,6 +51,7 @@ export class ChatApp {
         this.conversationId = this.loadOrCreateConversationId();
         this.isProcessing = false;
         this.isThinkingEnabled = false;
+        this.isMarkdownEnabled = true;
 
         // Initialize the app
         this.initialize();
@@ -112,6 +114,14 @@ export class ChatApp {
             setStorage('thinkingEnabled', this.isThinkingEnabled);
         });
 
+        // Markdown toggle change
+        this.markdownToggle.addEventListener('change', (e) => {
+            this.isMarkdownEnabled = e.target.checked;
+            setStorage('markdownEnabled', this.isMarkdownEnabled);
+            // Re-render all assistant messages with new markdown setting
+            this.messageComponent.reRenderAssistantMessages(this.isMarkdownEnabled);
+        });
+
         // Load saved model selection
         const savedModel = getStorage('selectedModel');
         if (savedModel) {
@@ -123,6 +133,13 @@ export class ChatApp {
         if (savedThinking !== null) {
             this.isThinkingEnabled = savedThinking === 'true' || savedThinking === true;
             this.thinkingToggle.checked = this.isThinkingEnabled;
+        }
+
+        // Load saved markdown preference
+        const savedMarkdown = getStorage('markdownEnabled');
+        if (savedMarkdown !== null) {
+            this.isMarkdownEnabled = savedMarkdown === 'true' || savedMarkdown === true;
+            this.markdownToggle.checked = this.isMarkdownEnabled;
         }
 
         // Initial update of thinking toggle state
@@ -223,7 +240,7 @@ export class ChatApp {
                     this.messageComponent.updateMessage(
                         typingIndicator,
                         fullResponse,
-                        true // render as markdown
+                        this.isMarkdownEnabled
                     );
                 },
                 this.isThinkingEnabled

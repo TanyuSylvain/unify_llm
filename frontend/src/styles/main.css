@@ -282,6 +282,18 @@ body {
     cursor: not-allowed;
 }
 
+/* Markdown Toggle */
+.markdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.markdown-toggle .toggle-label {
+    font-size: 0.9rem;
+    color: #aaa;
+}
+
 /* Chat Container */
 .chat-container {
     flex: 1;
@@ -450,11 +462,6 @@ body {
 
 .message.assistant .katex-display > .katex {
     display: inline-block;
-}
-
-/* Ensure math doesn't overflow message bubble */
-.message.assistant {
-    overflow: hidden;
 }
 
 /* Input Container */

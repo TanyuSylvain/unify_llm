@@ -9,6 +9,8 @@ export class MessageComponent {
     constructor(messagesContainer) {
         this.container = messagesContainer;
         this.renderer = new MarkdownRenderer();
+        // Store raw content for assistant messages to support re-rendering
+        this.messageContents = new Map();
     }
 
     /**
@@ -26,7 +28,14 @@ export class MessageComponent {
      * @returns {HTMLElement} Message element
      */
     addAssistantMessage(content = '') {
-        return this.addMessage(content, 'assistant');
+        const messageEl = this.addMessage(content, 'assistant');
+        // Store raw content for re-rendering
+        if (messageEl) {
+            const msgId = messageEl.dataset.messageId || Date.now().toString() + Math.random().toString();
+            messageEl.dataset.messageId = msgId;
+            this.messageContents.set(msgId, content);
+        }
+        return messageEl;
     }
 
     /**
@@ -67,9 +76,17 @@ export class MessageComponent {
      * @param {boolean} isMarkdown - Whether to render as markdown
      */
     updateMessage(messageEl, content, isMarkdown = false) {
+        // Store raw content for this message
+        const msgId = messageEl.dataset.messageId;
+        if (msgId) {
+            this.messageContents.set(msgId, content);
+        }
+
         if (isMarkdown) {
             messageEl.innerHTML = this.renderer.render(content);
         } else {
+            // Preserve line breaks in raw mode
+            messageEl.style.whiteSpace = 'pre-wrap';
             messageEl.textContent = content;
         }
         this.scrollToBottom();
@@ -100,6 +117,28 @@ export class MessageComponent {
      */
     clearMessages() {
         this.container.innerHTML = '';
+        this.messageContents.clear();
+    }
+
+    /**
+     * Re-render all assistant messages with new markdown setting
+     * @param {boolean} isMarkdown - Whether to render as markdown
+     */
+    reRenderAssistantMessages(isMarkdown) {
+        const assistantMessages = this.container.querySelectorAll('.message.assistant');
+        assistantMessages.forEach(messageEl => {
+            const msgId = messageEl.dataset.messageId;
+            if (msgId && this.messageContents.has(msgId)) {
+                const content = this.messageContents.get(msgId);
+                if (isMarkdown) {
+                    messageEl.style.whiteSpace = '';
+                    messageEl.innerHTML = this.renderer.render(content);
+                } else {
+                    messageEl.style.whiteSpace = 'pre-wrap';
+                    messageEl.textContent = content;
+                }
+            }
+        });
     }
 
     /**
