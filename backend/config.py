@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     # Provider Base URLs
     qwen_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     glm_base_url: str = "https://open.bigmodel.cn/api/paas/v4"
-    minimax_base_url: str = "https://api.minimax.chat/v1"
+    minimax_base_url: str = "https://api.minimax.io/v1"
 
     # Storage Configuration
     storage_backend: str = "memory"  # Options: memory, sqlite, redis
