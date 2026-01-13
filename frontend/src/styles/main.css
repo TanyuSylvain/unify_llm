@@ -21,7 +21,8 @@ body {
 
 /* Sidebar */
 .sidebar {
-    width: 280px;
+    width: 20%;
+    min-width: 200px;
     background: #1a1a2e;
     color: white;
     display: flex;
@@ -297,8 +298,7 @@ body {
 /* Chat Container */
 .chat-container {
     flex: 1;
-    max-width: 800px;
-    width: 100%;
+    width: 70%;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
