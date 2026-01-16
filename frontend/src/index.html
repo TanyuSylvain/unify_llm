@@ -61,7 +61,7 @@
             <!-- Multi-Agent Configuration Panel -->
             <div id="multiAgentConfig" class="multi-agent-config-container" style="display: none;"></div>
 
-            <!-- Main Panel: Conversation + Debate (side by side) -->
+            <!-- Main Panel: Conversation + Debate Process (side by side) -->
             <div class="main-panel">
                 <!-- Chat Container -->
                 <div class="chat-container">
@@ -81,15 +81,17 @@
                     </div>
                 </div>
 
-                <!-- Debate Viewer Panel (Right Side) -->
-                <div class="debate-panel" id="debatePanel" style="display: none;">
-                    <div class="debate-panel-header">
-                        <span class="debate-panel-title">Debate Process</span>
+                <!-- Debate Process Container (Right Side) -->
+                <div id="debatePanel" class="debate-container" style="display: none;">
+                    <!-- Debate Header -->
+                    <div class="debate-header">
+                        <span class="debate-title">Debate Process</span>
+                        <span id="debateStatus" class="debate-status"></span>
                     </div>
                     <!-- Progress Indicator -->
                     <div id="progressIndicator" class="progress-indicator-container"></div>
-                    <!-- Debate Viewer -->
-                    <div id="debateViewer" class="debate-viewer-container"></div>
+                    <!-- Round cards go directly here -->
+                    <div id="debateViewer" class="debate-rounds"></div>
                 </div>
             </div>
         </main>

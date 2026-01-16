@@ -7,9 +7,7 @@ export class DebateViewer {
     constructor(containerElement) {
         this.container = containerElement;
         this.iterations = [];
-        this.finalAnswer = null;
-        this.terminationReason = null;
-        this.isExpanded = true;
+        this.expandedCard = null; // Track which card is currently expanded
     }
 
     /**
@@ -24,57 +22,55 @@ export class DebateViewer {
      */
     clear() {
         this.iterations = [];
-        this.finalAnswer = null;
-        this.terminationReason = null;
+        this.expandedCard = null;
         this.render();
     }
 
     /**
-     * Render the debate viewer
+     * Render the debate viewer (just round cards, accordion style)
      */
     render() {
-        if (this.iterations.length === 0 && !this.finalAnswer) {
+        if (this.iterations.length === 0) {
             this.container.innerHTML = '';
             this.container.style.display = 'none';
             return;
         }
 
-        this.container.style.display = 'block';
+        this.container.style.display = 'flex';
+        this.container.style.flexDirection = 'column';
+        this.container.style.height = '100%';
 
-        this.container.innerHTML = `
-            <div class="debate-viewer ${this.isExpanded ? 'expanded' : 'collapsed'}">
-                <div class="debate-header" title="Click to ${this.isExpanded ? 'collapse' : 'expand'}">
-                    <span class="debate-title">Debate Process</span>
-                    <span class="debate-toggle">${this.isExpanded ? '&#x25BC;' : '&#x25B6;'}</span>
-                </div>
-                <div class="debate-content">
-                    <div class="debate-timeline">
-                        ${this.renderIterations()}
-                    </div>
-                    ${this.finalAnswer ? this.renderFinalAnswer() : ''}
-                </div>
-            </div>
-        `;
+        this.container.innerHTML = this.renderIterations();
 
         this.setupEventListeners();
     }
 
     /**
-     * Render all iterations
+     * Render all iterations as accordion cards
      */
     renderIterations() {
-        return this.iterations.map((iteration, index) => `
-            <div class="iteration-card" data-iteration="${index + 1}">
-                <div class="iteration-header">
-                    <span class="iteration-number">Round ${index + 1}</span>
+        return this.iterations.map((iteration, index) => {
+            const isExpanded = this.expandedCard === index;
+            const nextRound = index + 1 < this.iterations.length ? `Round ${index + 2}` : null;
+            return `
+            <div class="round-card ${isExpanded ? 'expanded' : ''}" data-iteration="${index + 1}">
+                <div class="round-card-header" data-iteration="${index + 1}">
+                    <span class="round-number">Round ${index + 1}</span>
                     ${iteration.review ? this.renderScoreBadge(iteration.review.overall_score) : ''}
+                    <span class="round-toggle">${isExpanded ? '▲' : '▼'}</span>
                 </div>
-                <div class="iteration-body">
-                    ${iteration.answer ? this.renderExpertAnswer(iteration.answer) : ''}
-                    ${iteration.review ? this.renderCriticReview(iteration.review) : ''}
+                ${isExpanded ? `
+                <div class="round-card-content">
+                    <div class="round-card-body">
+                        ${iteration.answer ? this.renderExpertAnswer(iteration.answer) : ''}
+                        ${iteration.review ? this.renderCriticReview(iteration.review) : ''}
+                    </div>
+                    ${nextRound ? `<div class="next-round-indicator" data-next="${index + 2}">Next: ${nextRound} ▾</div>` : ''}
                 </div>
+                ` : ''}
             </div>
-        `).join('');
+        `;
+        }).join('');
     }
 
     /**
@@ -193,53 +189,28 @@ export class DebateViewer {
     }
 
     /**
-     * Render final answer section
-     */
-    renderFinalAnswer() {
-        const reasonText = this.getReasonText(this.terminationReason);
-
-        return `
-            <div class="final-answer-card">
-                <div class="card-header">
-                    <span class="card-icon">&#x2705;</span>
-                    <span class="card-title">Final Answer</span>
-                    ${reasonText ? `<span class="termination-reason">${reasonText}</span>` : ''}
-                </div>
-                <div class="card-body">
-                    <div class="final-answer-content">
-                        ${this.escapeHtml(this.finalAnswer)}
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    /**
-     * Get human-readable termination reason
-     */
-    getReasonText(reason) {
-        const reasonMap = {
-            'score_threshold': 'Score threshold reached',
-            'explicit_pass': 'Critic approved',
-            'max_iterations': 'Max iterations',
-            'convergence': 'Converged',
-            'simple_question': 'Direct answer'
-        };
-        return reasonMap[reason] || reason;
-    }
-
-    /**
      * Set up event listeners
      */
     setupEventListeners() {
-        // Toggle expand/collapse
-        const header = this.container.querySelector('.debate-header');
-        if (header) {
-            header.addEventListener('click', () => {
-                this.isExpanded = !this.isExpanded;
-                this.render();
+        // Accordion behavior - click header to toggle, auto-collapse others
+        const cardHeaders = this.container.querySelectorAll('.round-card-header');
+        cardHeaders.forEach(header => {
+            header.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const iteration = parseInt(header.dataset.iteration) - 1;
+                this.toggleCard(iteration);
             });
-        }
+        });
+
+        // Next round indicator - click to navigate to next round
+        const nextIndicators = this.container.querySelectorAll('.next-round-indicator');
+        nextIndicators.forEach(indicator => {
+            indicator.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const nextRound = parseInt(indicator.dataset.next) - 1;
+                this.toggleCard(nextRound);
+            });
+        });
 
         // Toggle details buttons
         const toggleButtons = this.container.querySelectorAll('.toggle-details');
@@ -254,6 +225,20 @@ export class DebateViewer {
     }
 
     /**
+     * Toggle a card (accordion behavior)
+     */
+    toggleCard(iteration) {
+        if (this.expandedCard === iteration) {
+            // Collapse if already expanded
+            this.expandedCard = null;
+        } else {
+            // Expand this card, collapse others
+            this.expandedCard = iteration;
+        }
+        this.render();
+    }
+
+    /**
      * Add an expert answer for an iteration
      * @param {number} iteration - Iteration number
      * @param {Object} answer - Expert answer object
@@ -263,6 +248,9 @@ export class DebateViewer {
             this.iterations.push({});
         }
         this.iterations[iteration - 1].answer = answer;
+
+        // Auto-expand the new card
+        this.expandedCard = iteration - 1;
         this.render();
     }
 
@@ -280,13 +268,14 @@ export class DebateViewer {
     }
 
     /**
-     * Set the final answer
+     * Set the final answer (not rendered in debate panel)
      * @param {string} answer - Final answer text
      * @param {string} reason - Termination reason
      */
     setFinalAnswer(answer, reason) {
-        this.finalAnswer = answer;
-        this.terminationReason = reason;
+        // Final answer is shown in main conversation, not here
+        // Just collapse all cards
+        this.expandedCard = null;
         this.render();
     }
 
@@ -304,7 +293,7 @@ export class DebateViewer {
      * Show the debate viewer
      */
     show() {
-        this.container.style.display = 'block';
+        this.container.style.display = 'flex';
     }
 
     /**
