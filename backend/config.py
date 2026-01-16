@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     database_url: Optional[str] = None
     redis_url: Optional[str] = None
 
+    # Multi-Agent Configuration
+    multi_agent_max_iterations: int = 3
+    multi_agent_score_threshold: float = 80.0
+    multi_agent_session_timeout: int = 600  # seconds
+
     # Logging
     log_level: str = "INFO"
 

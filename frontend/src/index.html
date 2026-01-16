@@ -22,13 +22,22 @@
         <main class="main-content">
             <!-- Header -->
             <div class="header">
-                <h1>LLM GUI - Multi-Provider Chat</h1>
+                <button id="sidebarToggleBtn" class="header-sidebar-toggle" title="Toggle Sidebar">
+                    <span id="sidebarToggleIcon">&#x25C0;</span>
+                </button>
+                <h1>LLM GUI</h1>
                 <div class="controls">
-                    <div class="model-selector">
-                        <label for="modelSelect">Model:</label>
-                        <select id="modelSelect">
-                            <option>Loading...</option>
-                        </select>
+                    <!-- Mode Selector -->
+                    <div id="modeSelector" class="mode-selector-container"></div>
+
+                    <!-- Simple Mode Controls -->
+                    <div class="model-selector-container">
+                        <div class="model-selector">
+                            <label for="modelSelect">Model:</label>
+                            <select id="modelSelect">
+                                <option>Loading...</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="thinking-toggle">
                         <label class="toggle-switch">
@@ -37,6 +46,8 @@
                         </label>
                         <span class="toggle-label">Thinking</span>
                     </div>
+
+                    <!-- Always visible controls -->
                     <div class="markdown-toggle">
                         <label class="toggle-switch">
                             <input type="checkbox" id="markdownToggle" checked>
@@ -47,17 +58,38 @@
                 </div>
             </div>
 
-            <!-- Chat Container -->
-            <div class="chat-container">
-                <div class="messages" id="messages"></div>
-                <div class="input-container">
-                    <input
-                        type="text"
-                        id="messageInput"
-                        placeholder="Type your message..."
-                        autocomplete="off"
-                    >
-                    <button id="sendBtn">Send</button>
+            <!-- Multi-Agent Configuration Panel -->
+            <div id="multiAgentConfig" class="multi-agent-config-container" style="display: none;"></div>
+
+            <!-- Main Panel: Conversation + Debate (side by side) -->
+            <div class="main-panel">
+                <!-- Chat Container -->
+                <div class="chat-container">
+                    <!-- Agent Status (shown during multi-agent debate) -->
+                    <div id="agentStatus" class="agent-status" style="display: none;"></div>
+
+                    <div class="messages" id="messages"></div>
+
+                    <div class="input-container">
+                        <input
+                            type="text"
+                            id="messageInput"
+                            placeholder="Type your message..."
+                            autocomplete="off"
+                        >
+                        <button id="sendBtn">Send</button>
+                    </div>
+                </div>
+
+                <!-- Debate Viewer Panel (Right Side) -->
+                <div class="debate-panel" id="debatePanel" style="display: none;">
+                    <div class="debate-panel-header">
+                        <span class="debate-panel-title">Debate Process</span>
+                    </div>
+                    <!-- Progress Indicator -->
+                    <div id="progressIndicator" class="progress-indicator-container"></div>
+                    <!-- Debate Viewer -->
+                    <div id="debateViewer" class="debate-viewer-container"></div>
                 </div>
             </div>
         </main>

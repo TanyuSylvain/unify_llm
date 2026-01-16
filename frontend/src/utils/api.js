@@ -237,4 +237,165 @@ export class APIClient {
             throw error;
         }
     }
+
+    /**
+     * Stream a multi-agent debate response
+     * @param {string} message - User message
+     * @param {string} conversationId - Conversation ID
+     * @param {Object} config - Multi-agent configuration
+     * @param {Object} config.models - Per-role model configuration
+     * @param {string} config.models.moderator - Moderator model ID
+     * @param {string} config.models.expert - Expert model ID
+     * @param {string} config.models.critic - Critic model ID
+     * @param {number} config.maxIterations - Maximum debate iterations
+     * @param {number} config.scoreThreshold - Score threshold for passing
+     * @param {Object} callbacks - Event callbacks
+     * @param {Function} callbacks.onPhaseStart - Called when a phase starts
+     * @param {Function} callbacks.onExpertAnswer - Called when expert provides answer
+     * @param {Function} callbacks.onCriticReview - Called when critic provides review
+     * @param {Function} callbacks.onIterationComplete - Called when iteration completes
+     * @param {Function} callbacks.onDone - Called when debate completes
+     * @param {Function} callbacks.onError - Called on error
+     * @returns {Promise<void>}
+     */
+    async streamMultiAgentDebate(message, conversationId, config, callbacks) {
+        try {
+            const body = {
+                message,
+                conversation_id: conversationId,
+                models: config.models,
+                max_iterations: config.maxIterations,
+                score_threshold: config.scoreThreshold
+            };
+
+            const response = await fetch(`${this.baseURL}/chat/multi-agent/stream`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Request failed');
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+
+                // Process SSE events
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const eventData = JSON.parse(line.slice(6));
+                            this._handleMultiAgentEvent(eventData, callbacks);
+                        } catch (e) {
+                            console.warn('Failed to parse SSE event:', line);
+                        }
+                    }
+                }
+            }
+
+            // Process any remaining buffer
+            if (buffer.startsWith('data: ')) {
+                try {
+                    const eventData = JSON.parse(buffer.slice(6));
+                    this._handleMultiAgentEvent(eventData, callbacks);
+                } catch (e) {
+                    // Ignore incomplete event
+                }
+            }
+        } catch (error) {
+            console.error('Error in multi-agent debate:', error);
+            if (callbacks.onError) {
+                callbacks.onError(error.message);
+            }
+            throw error;
+        }
+    }
+
+    /**
+     * Handle a multi-agent SSE event
+     * @private
+     */
+    _handleMultiAgentEvent(event, callbacks) {
+        switch (event.type) {
+            case 'phase_start':
+                if (callbacks.onPhaseStart) {
+                    callbacks.onPhaseStart(event.phase, event.iteration, event.message);
+                }
+                break;
+            case 'expert_answer':
+                if (callbacks.onExpertAnswer) {
+                    callbacks.onExpertAnswer(event.iteration, event.answer);
+                }
+                break;
+            case 'critic_review':
+                if (callbacks.onCriticReview) {
+                    callbacks.onCriticReview(event.iteration, event.review);
+                }
+                break;
+            case 'iteration_complete':
+                if (callbacks.onIterationComplete) {
+                    callbacks.onIterationComplete(event.iteration, event.status, event.score, event.summary);
+                }
+                break;
+            case 'done':
+                if (callbacks.onDone) {
+                    callbacks.onDone(event.final_answer, event.was_direct_answer, event.termination_reason, event.total_iterations);
+                }
+                break;
+            case 'error':
+                if (callbacks.onError) {
+                    callbacks.onError(event.error);
+                }
+                break;
+            default:
+                console.warn('Unknown multi-agent event type:', event.type);
+        }
+    }
+
+    /**
+     * Send a multi-agent chat message and get complete response (non-streaming)
+     * @param {string} message - User message
+     * @param {string} conversationId - Conversation ID
+     * @param {Object} config - Multi-agent configuration
+     * @returns {Promise<Object>} Response object
+     */
+    async sendMultiAgentMessage(message, conversationId, config) {
+        try {
+            const body = {
+                message,
+                conversation_id: conversationId,
+                models: config.models,
+                max_iterations: config.maxIterations,
+                score_threshold: config.scoreThreshold
+            };
+
+            const response = await fetch(`${this.baseURL}/chat/multi-agent/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Request failed');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error sending multi-agent message:', error);
+            throw error;
+        }
+    }
 }

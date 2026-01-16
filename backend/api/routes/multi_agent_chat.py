@@ -1,0 +1,206 @@
+"""
+Multi-Agent Debate Chat endpoints.
+
+Provides endpoints for the multi-agent debate workflow with
+Moderator-Expert-Critic collaboration.
+"""
+
+import json
+import uuid
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
+
+from backend.api.schemas import (
+    MultiAgentChatRequest,
+    MultiAgentChatResponse,
+    MultiAgentModelConfig
+)
+from backend.core.multi_agent import MultiAgentDebateWorkflow
+from backend.storage import MemoryStorage
+from backend.config import settings
+
+router = APIRouter(prefix="/chat/multi-agent", tags=["multi-agent-chat"])
+
+# Shared storage instance
+_storage = MemoryStorage()
+
+# Workflow pool (keyed by model combination)
+_workflows: dict[str, MultiAgentDebateWorkflow] = {}
+
+
+def get_workflow(
+    moderator_model: str,
+    expert_model: str,
+    critic_model: str,
+    max_iterations: int = 3,
+    score_threshold: float = 80.0
+) -> MultiAgentDebateWorkflow:
+    """
+    Get or create a workflow instance for the specified model combination.
+
+    Args:
+        moderator_model: Model ID for moderator role
+        expert_model: Model ID for expert role
+        critic_model: Model ID for critic role
+        max_iterations: Maximum debate iterations
+        score_threshold: Score threshold for passing
+
+    Returns:
+        MultiAgentDebateWorkflow instance
+    """
+    global _workflows, _storage
+
+    # Key includes all configuration
+    workflow_key = f"{moderator_model}:{expert_model}:{critic_model}:{max_iterations}:{score_threshold}"
+
+    if workflow_key not in _workflows:
+        _workflows[workflow_key] = MultiAgentDebateWorkflow(
+            moderator_model=moderator_model,
+            expert_model=expert_model,
+            critic_model=critic_model,
+            storage=_storage,
+            max_iterations=max_iterations,
+            score_threshold=score_threshold
+        )
+
+    return _workflows[workflow_key]
+
+
+def resolve_models(models: MultiAgentModelConfig = None) -> tuple[str, str, str]:
+    """
+    Resolve model configuration with defaults.
+
+    Args:
+        models: Optional per-role model configuration
+
+    Returns:
+        Tuple of (moderator_model, expert_model, critic_model)
+    """
+    default_model = settings.default_model
+
+    if models is None:
+        return default_model, default_model, default_model
+
+    return (
+        models.moderator or default_model,
+        models.expert or default_model,
+        models.critic or default_model
+    )
+
+
+@router.post("/", response_model=MultiAgentChatResponse)
+async def multi_agent_chat(request: MultiAgentChatRequest):
+    """
+    Send a message and get a complete multi-agent debate response.
+
+    The workflow will:
+    1. Moderator assesses question complexity
+    2. For simple questions: returns direct answer
+    3. For complex questions: Expert-Critic debate loop
+    4. Moderator synthesizes final answer
+
+    Args:
+        request: MultiAgentChatRequest with message and optional configuration
+
+    Returns:
+        MultiAgentChatResponse with final answer and metadata
+    """
+    if not request.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    try:
+        # Resolve models
+        moderator_model, expert_model, critic_model = resolve_models(request.models)
+
+        # Get or create workflow
+        workflow = get_workflow(
+            moderator_model=moderator_model,
+            expert_model=expert_model,
+            critic_model=critic_model,
+            max_iterations=request.max_iterations,
+            score_threshold=request.score_threshold
+        )
+
+        conversation_id = request.conversation_id or str(uuid.uuid4())
+
+        # Run the workflow
+        result = await workflow.invoke(request.message, conversation_id)
+
+        return MultiAgentChatResponse(
+            conversation_id=conversation_id,
+            models=MultiAgentModelConfig(
+                moderator=moderator_model,
+                expert=expert_model,
+                critic=critic_model
+            ),
+            final_answer=result["final_answer"],
+            was_direct_answer=result.get("was_direct_answer", False),
+            termination_reason=result.get("termination_reason", "unknown"),
+            total_iterations=result.get("total_iterations", 0)
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/stream")
+async def multi_agent_chat_stream(request: MultiAgentChatRequest):
+    """
+    Send a message and get a streaming multi-agent debate response.
+
+    Streams Server-Sent Events (SSE) with the following event types:
+    - phase_start: New phase beginning
+    - expert_answer: Expert's structured answer
+    - critic_review: Critic's structured review
+    - iteration_complete: Iteration finished
+    - done: Final result
+    - error: Error occurred
+
+    Args:
+        request: MultiAgentChatRequest with message and optional configuration
+
+    Returns:
+        StreamingResponse with SSE events
+    """
+    if not request.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    # Resolve models
+    moderator_model, expert_model, critic_model = resolve_models(request.models)
+    conversation_id = request.conversation_id or str(uuid.uuid4())
+
+    async def generate():
+        """Generate SSE stream of debate events."""
+        try:
+            workflow = get_workflow(
+                moderator_model=moderator_model,
+                expert_model=expert_model,
+                critic_model=critic_model,
+                max_iterations=request.max_iterations,
+                score_threshold=request.score_threshold
+            )
+
+            async for event in workflow.stream(request.message, conversation_id):
+                # Format as SSE event
+                event_data = json.dumps(event, ensure_ascii=False)
+                yield f"data: {event_data}\n\n"
+
+        except Exception as e:
+            error_event = json.dumps({
+                "type": "error",
+                "error": str(e)
+            }, ensure_ascii=False)
+            yield f"data: {error_event}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Conversation-ID": conversation_id,
+            "X-Moderator-Model": moderator_model,
+            "X-Expert-Model": expert_model,
+            "X-Critic-Model": critic_model
+        }
+    )

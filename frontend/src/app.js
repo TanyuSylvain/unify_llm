@@ -1,6 +1,7 @@
 /**
  * Main Application Module
  * Orchestrates all components and handles chat logic
+ * Supports both simple (single-agent) and multi-agent debate modes
  */
 
 import { APIClient } from './utils/api.js';
@@ -8,6 +9,10 @@ import { generateUUID, getStorage, setStorage } from './utils/helpers.js';
 import { MessageComponent } from './components/MessageComponent.js';
 import { ModelSelector } from './components/ModelSelector.js';
 import { Sidebar } from './components/Sidebar.js';
+import { ModeSelector } from './components/ModeSelector.js';
+import { MultiAgentConfig } from './components/MultiAgentConfig.js';
+import { ProgressIndicator } from './components/ProgressIndicator.js';
+import { DebateViewer } from './components/DebateViewer.js';
 
 export class ChatApp {
     constructor() {
@@ -22,6 +27,12 @@ export class ChatApp {
         this.thinkingToggle = document.getElementById('thinkingToggle');
         this.markdownToggle = document.getElementById('markdownToggle');
         this.sidebarElement = document.getElementById('sidebar');
+
+        // Multi-agent elements
+        this.modeSelectorElement = document.getElementById('modeSelector');
+        this.multiAgentConfigElement = document.getElementById('multiAgentConfig');
+        this.progressIndicatorElement = document.getElementById('progressIndicator');
+        this.debateViewerElement = document.getElementById('debateViewer');
 
         // Verify all required elements exist
         if (!this.messagesContainer || !this.messageInput || !this.sendBtn ||
@@ -47,11 +58,35 @@ export class ChatApp {
             () => this.createNewConversation()
         );
 
+        // Initialize multi-agent components (if elements exist)
+        this.modeSelector = null;
+        this.multiAgentConfig = null;
+        this.progressIndicator = null;
+        this.debateViewer = null;
+
+        if (this.modeSelectorElement) {
+            this.modeSelector = new ModeSelector(this.modeSelectorElement);
+        }
+        if (this.multiAgentConfigElement) {
+            this.multiAgentConfig = new MultiAgentConfig(this.multiAgentConfigElement, this.apiClient);
+        }
+
+        // Progress indicator in the debate panel
+        this.progressIndicatorElement = document.getElementById('progressIndicator');
+        if (this.progressIndicatorElement) {
+            this.progressIndicator = new ProgressIndicator(this.progressIndicatorElement);
+        }
+
+        if (this.debateViewerElement) {
+            this.debateViewer = new DebateViewer(this.debateViewerElement);
+        }
+
         // Conversation state
         this.conversationId = this.loadOrCreateConversationId();
         this.isProcessing = false;
         this.isThinkingEnabled = false;
         this.isMarkdownEnabled = true;
+        this.isMultiAgentMode = false;
 
         // Initialize the app
         this.initialize();
@@ -64,6 +99,22 @@ export class ChatApp {
         try {
             // Initialize model selector (fetches models from API)
             await this.modelSelector.initialize();
+
+            // Initialize multi-agent components
+            if (this.modeSelector) {
+                this.modeSelector.initialize();
+                this.isMultiAgentMode = this.modeSelector.isMultiAgentMode();
+            }
+            if (this.multiAgentConfig) {
+                await this.multiAgentConfig.initialize();
+                this.updateMultiAgentUIVisibility();
+            }
+            if (this.progressIndicator) {
+                this.progressIndicator.initialize();
+            }
+            if (this.debateViewer) {
+                this.debateViewer.initialize();
+            }
 
             // Load conversations list
             await this.sidebar.loadConversations();
@@ -108,6 +159,14 @@ export class ChatApp {
             this.updateThinkingToggleState();
         });
 
+        // Mode selector change
+        if (this.modeSelector) {
+            this.modeSelector.onChange((mode) => {
+                this.isMultiAgentMode = mode === 'multi-agent';
+                this.updateMultiAgentUIVisibility();
+            });
+        }
+
         // Thinking toggle change
         this.thinkingToggle.addEventListener('change', (e) => {
             this.isThinkingEnabled = e.target.checked;
@@ -121,6 +180,18 @@ export class ChatApp {
             // Re-render all assistant messages with new markdown setting
             this.messageComponent.reRenderAssistantMessages(this.isMarkdownEnabled);
         });
+
+        // Load saved sidebar state
+        const sidebarCollapsed = getStorage('sidebarCollapsed') === 'true';
+        if (sidebarCollapsed) {
+            this.collapseSidebar();
+        }
+
+        // Header sidebar toggle button
+        const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+        if (sidebarToggleBtn) {
+            sidebarToggleBtn.addEventListener('click', () => this.toggleSidebar());
+        }
 
         // Load saved model selection
         const savedModel = getStorage('selectedModel');
@@ -144,6 +215,117 @@ export class ChatApp {
 
         // Initial update of thinking toggle state
         this.updateThinkingToggleState();
+
+        // Initialize agent status
+        this.agentStatusElement = document.getElementById('agentStatus');
+    }
+
+    /**
+     * Update agent status display
+     */
+    updateAgentStatus(activeAgent, iteration, phase) {
+        if (!this.agentStatusElement) return;
+
+        const agents = [
+            { id: 'moderator', label: 'Moderator' },
+            { id: 'expert', label: 'Expert' },
+            { id: 'critic', label: 'Critic' }
+        ];
+
+        let html = '';
+        agents.forEach(agent => {
+            const isActive = agent.id === activeAgent;
+            html += `
+                <div class="agent-status-item ${isActive ? 'active' : ''}">
+                    <span class="agent-status-dot"></span>
+                    <span>${agent.label}</span>
+                </div>
+            `;
+        });
+
+        if (iteration > 0 && phase) {
+            html += `<span style="margin-left: auto; font-size: 0.8rem; color: #999;">Round ${iteration}</span>`;
+        }
+
+        this.agentStatusElement.innerHTML = html;
+        this.agentStatusElement.style.display = 'flex';
+    }
+
+    /**
+     * Hide agent status
+     */
+    hideAgentStatus() {
+        if (this.agentStatusElement) {
+            this.agentStatusElement.style.display = 'none';
+        }
+    }
+
+    /**
+     * Toggle sidebar collapsed state
+     */
+    toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) {
+            if (sidebar.classList.contains('collapsed')) {
+                this.expandSidebar();
+            } else {
+                this.collapseSidebar();
+            }
+        }
+    }
+
+    /**
+     * Collapse sidebar
+     */
+    collapseSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const toggleIcon = document.getElementById('sidebarToggleIcon');
+        if (sidebar) {
+            sidebar.classList.add('collapsed');
+        }
+        if (toggleIcon) {
+            toggleIcon.innerHTML = '&#x25B6;';  // Right arrow when collapsed
+        }
+        setStorage('sidebarCollapsed', 'true');
+    }
+
+    /**
+     * Expand sidebar
+     */
+    expandSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const toggleIcon = document.getElementById('sidebarToggleIcon');
+        if (sidebar) {
+            sidebar.classList.remove('collapsed');
+        }
+        if (toggleIcon) {
+            toggleIcon.innerHTML = '&#x25C0;';  // Left arrow when expanded
+        }
+        setStorage('sidebarCollapsed', 'false');
+    }
+
+    /**
+     * Update visibility of multi-agent UI components
+     */
+    updateMultiAgentUIVisibility() {
+        // Show/hide multi-agent config based on mode
+        if (this.multiAgentConfig) {
+            if (this.isMultiAgentMode) {
+                this.multiAgentConfig.show();
+            } else {
+                this.multiAgentConfig.hide();
+            }
+        }
+
+        // Show/hide simple mode controls
+        const simpleControls = document.querySelector('.model-selector-container');
+        const thinkingContainer = document.querySelector('.thinking-toggle');
+        if (simpleControls) {
+            simpleControls.style.display = this.isMultiAgentMode ? 'none' : 'flex';
+        }
+        if (thinkingContainer) {
+            thinkingContainer.style.display = this.isMultiAgentMode ? 'none' : 'flex';
+        }
     }
 
     /**
@@ -211,6 +393,18 @@ export class ChatApp {
         const message = this.messageInput.value.trim();
         if (!message || this.isProcessing) return;
 
+        // Route to appropriate handler based on mode
+        if (this.isMultiAgentMode) {
+            await this.sendMultiAgentMessage(message);
+        } else {
+            await this.sendSimpleMessage(message);
+        }
+    }
+
+    /**
+     * Send a message in simple (single-agent) mode
+     */
+    async sendSimpleMessage(message) {
         // Get selected model
         const modelId = this.modelSelector.getSelectedModel();
         if (!modelId) {
@@ -256,6 +450,142 @@ export class ChatApp {
             this.messageComponent.addErrorMessage(
                 `Error: ${error.message}`
             );
+        } finally {
+            this.setProcessing(false);
+            this.messageInput.focus();
+        }
+    }
+
+    /**
+     * Send a message in multi-agent debate mode
+     */
+    async sendMultiAgentMessage(message) {
+        // Get multi-agent config
+        const config = this.multiAgentConfig ? this.multiAgentConfig.getConfig() : {
+            models: {
+                moderator: this.modelSelector.getSelectedModel(),
+                expert: this.modelSelector.getSelectedModel(),
+                critic: this.modelSelector.getSelectedModel()
+            },
+            maxIterations: 3,
+            scoreThreshold: 80
+        };
+
+        // Update UI
+        this.messageComponent.addUserMessage(message);
+        this.messageInput.value = '';
+        this.setProcessing(true);
+
+        // Show debate panel
+        const debatePanel = document.getElementById('debatePanel');
+        if (debatePanel) {
+            debatePanel.style.display = 'flex';
+        }
+
+        // Clear previous debate data
+        if (this.debateViewer) {
+            this.debateViewer.clear();
+        }
+
+        // Start progress indicator
+        if (this.progressIndicator) {
+            this.progressIndicator.start(config.maxIterations);
+        }
+
+        // Show typing indicator for final answer
+        const typingIndicator = this.messageComponent.showTypingIndicator();
+
+        try {
+            await this.apiClient.streamMultiAgentDebate(
+                message,
+                this.conversationId,
+                config,
+                {
+                    onPhaseStart: (phase, iteration, msg) => {
+                        console.log(`Phase: ${phase}, Iteration: ${iteration}`);
+                        if (this.progressIndicator) {
+                            this.progressIndicator.setPhase(phase, iteration);
+                        }
+                        // Update agent status based on phase
+                        let activeAgent = 'moderator';
+                        if (phase === 'expert_generate' || phase === 'expert_answer') {
+                            activeAgent = 'expert';
+                        } else if (phase === 'critic_review') {
+                            activeAgent = 'critic';
+                        }
+                        this.updateAgentStatus(activeAgent, iteration, phase);
+                    },
+                    onExpertAnswer: (iteration, answer) => {
+                        console.log(`Expert answer (iteration ${iteration}):`, answer);
+                        if (this.debateViewer) {
+                            this.debateViewer.addExpertAnswer(iteration, answer);
+                        }
+                    },
+                    onCriticReview: (iteration, review) => {
+                        console.log(`Critic review (iteration ${iteration}):`, review);
+                        if (this.debateViewer) {
+                            this.debateViewer.addCriticReview(iteration, review);
+                        }
+                    },
+                    onIterationComplete: (iteration, status, score, summary) => {
+                        console.log(`Iteration ${iteration} complete: ${status}, score: ${score}`);
+                    },
+                    onDone: (finalAnswer, wasDirectAnswer, terminationReason, totalIterations) => {
+                        console.log('Debate complete:', { finalAnswer, wasDirectAnswer, terminationReason, totalIterations });
+
+                        // Update final answer in message
+                        this.messageComponent.updateMessage(
+                            typingIndicator,
+                            finalAnswer,
+                            this.isMarkdownEnabled
+                        );
+
+                        // Update debate viewer with final answer
+                        if (this.debateViewer && !wasDirectAnswer) {
+                            this.debateViewer.setFinalAnswer(finalAnswer, terminationReason);
+                        }
+
+                        // Complete progress indicator
+                        if (this.progressIndicator) {
+                            if (wasDirectAnswer) {
+                                this.progressIndicator.setDirectAnswer();
+                            }
+                            this.progressIndicator.complete(terminationReason);
+                        }
+
+                        // Hide agent status
+                        this.hideAgentStatus();
+                    },
+                    onError: (error) => {
+                        console.error('Multi-agent error:', error);
+                        this.messageComponent.removeTypingIndicator(typingIndicator);
+                        this.messageComponent.addErrorMessage(`Error: ${error}`);
+
+                        if (this.progressIndicator) {
+                            this.progressIndicator.showError(error);
+                        }
+
+                        // Hide agent status on error
+                        this.hideAgentStatus();
+                    }
+                }
+            );
+
+            // Refresh the sidebar
+            await this.sidebar.loadConversations();
+            this.sidebar.setCurrentConversation(this.conversationId);
+
+        } catch (error) {
+            console.error('Error in multi-agent debate:', error);
+            this.messageComponent.removeTypingIndicator(typingIndicator);
+            this.messageComponent.addErrorMessage(`Error: ${error.message}`);
+
+            if (this.progressIndicator) {
+                this.progressIndicator.showError(error.message);
+            }
+
+            // Hide agent status on error
+            this.hideAgentStatus();
         } finally {
             this.setProcessing(false);
             this.messageInput.focus();

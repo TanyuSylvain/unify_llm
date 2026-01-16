@@ -106,3 +106,113 @@ class ConversationHistoryResponse(BaseModel):
     """Response model for conversation history."""
     conversation_id: str = Field(..., description="Conversation ID")
     messages: List[MessageInfo] = Field(..., description="List of messages")
+
+
+# =============================================================================
+# Multi-Agent Debate Schemas
+# =============================================================================
+
+class MultiAgentModelConfig(BaseModel):
+    """Per-role model configuration for multi-agent debate."""
+    moderator: Optional[str] = Field(None, description="Model ID for moderator role")
+    expert: Optional[str] = Field(None, description="Model ID for expert role")
+    critic: Optional[str] = Field(None, description="Model ID for critic role")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "moderator": "glm-4-flash",
+                "expert": "qwen-max",
+                "critic": "mistral-large-latest"
+            }
+        }
+
+
+class MultiAgentChatRequest(BaseModel):
+    """Request model for multi-agent chat endpoints."""
+    message: str = Field(..., description="User's message", min_length=1)
+    conversation_id: Optional[str] = Field(None, description="Optional conversation ID")
+    models: Optional[MultiAgentModelConfig] = Field(None, description="Per-role model configuration")
+    max_iterations: int = Field(default=3, ge=1, le=5, description="Maximum debate iterations")
+    score_threshold: float = Field(default=80.0, ge=0, le=100, description="Score threshold for passing")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "message": "What are the pros and cons of microservices architecture?",
+                "conversation_id": "conv-123",
+                "models": {
+                    "moderator": "glm-4-flash",
+                    "expert": "qwen-max",
+                    "critic": "mistral-large-latest"
+                },
+                "max_iterations": 3,
+                "score_threshold": 80.0
+            }
+        }
+
+
+class CriticIssue(BaseModel):
+    """Individual issue identified by the critic."""
+    category: str = Field(..., description="Issue category: logic, facts, completeness, relevance")
+    severity: str = Field(..., description="Issue severity: minor, moderate, major")
+    description: str = Field(..., description="Issue description")
+    quote: str = Field(..., description="Original text citation")
+
+
+class ExpertAnswerSchema(BaseModel):
+    """Structured expert answer format."""
+    version: int = Field(..., description="Answer version/iteration number")
+    understanding: str = Field(..., description="Problem understanding summary")
+    core_points: List[str] = Field(..., description="Core arguments/points")
+    details: str = Field(..., description="Detailed explanation")
+    conclusion: str = Field(..., description="Conclusion summary")
+    confidence: float = Field(..., ge=0, le=1, description="Confidence level")
+    limitations: List[str] = Field(default=[], description="Known limitations")
+    modification_log: List[str] = Field(default=[], description="Modification history")
+
+
+class CriticReviewSchema(BaseModel):
+    """Structured critic review format."""
+    review_version: int = Field(..., description="Review version number")
+    overall_score: float = Field(..., ge=0, le=100, description="Overall score")
+    passed: bool = Field(..., description="Whether answer passes threshold")
+    issues: List[CriticIssue] = Field(default=[], description="List of identified issues")
+    strengths: List[str] = Field(default=[], description="Positive aspects")
+    suggestions: List[str] = Field(default=[], description="Improvement suggestions")
+    confidence: float = Field(..., ge=0, le=1, description="Review confidence")
+
+
+class IterationUpdate(BaseModel):
+    """Progress update for a single iteration."""
+    iteration: int = Field(..., description="Iteration number")
+    phase: str = Field(..., description="Current phase: moderator_init, expert_generate, critic_review, moderator_synthesize")
+    expert_answer: Optional[ExpertAnswerSchema] = Field(None, description="Expert's answer")
+    critic_review: Optional[CriticReviewSchema] = Field(None, description="Critic's review")
+    summary: Optional[str] = Field(None, description="Iteration summary")
+
+
+class MultiAgentChatResponse(BaseModel):
+    """Response model for multi-agent chat endpoint."""
+    conversation_id: str = Field(..., description="Conversation ID")
+    models: MultiAgentModelConfig = Field(..., description="Models used for each role")
+    final_answer: str = Field(..., description="Final synthesized answer")
+    was_direct_answer: bool = Field(..., description="True if moderator answered directly (simple question)")
+    termination_reason: str = Field(..., description="Reason for termination")
+    total_iterations: int = Field(..., description="Total iterations completed")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "conversation_id": "conv-123",
+                "models": {
+                    "moderator": "glm-4-flash",
+                    "expert": "qwen-max",
+                    "critic": "mistral-large-latest"
+                },
+                "final_answer": "Based on the multi-agent debate...",
+                "was_direct_answer": False,
+                "termination_reason": "score_threshold",
+                "total_iterations": 2
+            }
+        }
