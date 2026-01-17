@@ -82,6 +82,7 @@ class ConversationInfo(BaseModel):
     """Information about a conversation."""
     id: str = Field(..., description="Conversation ID")
     model: str = Field(..., description="Model used")
+    mode: str = Field(default="simple", description="Conversation mode: 'simple' or 'debate'")
     created_at: str = Field(..., description="Creation timestamp")
     updated_at: str = Field(..., description="Last update timestamp")
     message_count: int = Field(..., description="Number of messages")
@@ -214,5 +215,47 @@ class MultiAgentChatResponse(BaseModel):
                 "was_direct_answer": False,
                 "termination_reason": "score_threshold",
                 "total_iterations": 2
+            }
+        }
+
+
+# =============================================================================
+# Mode Switching Schemas
+# =============================================================================
+
+class SwitchModeRequest(BaseModel):
+    """Request model for switching conversation mode."""
+    target_mode: str = Field(..., description="Target mode: 'simple' or 'debate'")
+    debate_config: Optional[Dict] = Field(None, description="Model configuration for debate mode")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "target_mode": "debate",
+                "debate_config": {
+                    "moderator": "glm-4-flash",
+                    "expert": "qwen-max",
+                    "critic": "mistral-large-latest",
+                    "max_iterations": 3,
+                    "score_threshold": 80.0
+                }
+            }
+        }
+
+
+class SwitchModeResponse(BaseModel):
+    """Response model for mode switching."""
+    success: bool = Field(..., description="Whether the switch was successful")
+    conversation_id: str = Field(..., description="Conversation ID")
+    mode: str = Field(..., description="Current mode after switch")
+    message: str = Field(..., description="Status message")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "conversation_id": "conv-123",
+                "mode": "debate",
+                "message": "Switched to debate mode. Previous conversation context prepared."
             }
         }

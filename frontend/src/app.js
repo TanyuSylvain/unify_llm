@@ -13,6 +13,8 @@ import { ModeSelector } from './components/ModeSelector.js';
 import { MultiAgentConfig } from './components/MultiAgentConfig.js';
 import { ProgressIndicator } from './components/ProgressIndicator.js';
 import { DebateViewer } from './components/DebateViewer.js';
+import ModeratorStatusIndicator from './components/ModeratorStatusIndicator.js';
+import ModeratorAnalysisViewer from './components/ModeratorAnalysisViewer.js';
 
 export class ChatApp {
     constructor() {
@@ -80,6 +82,14 @@ export class ChatApp {
         if (this.debateViewerElement) {
             this.debateViewer = new DebateViewer(this.debateViewerElement);
         }
+
+        // Initialize moderator components
+        const moderatorStatusElement = document.getElementById('moderatorStatus');
+        const moderatorAnalysisElement = document.getElementById('moderatorAnalysis');
+        this.moderatorStatusIndicator = moderatorStatusElement ?
+            new ModeratorStatusIndicator(moderatorStatusElement) : null;
+        this.moderatorAnalysisViewer = moderatorAnalysisElement ?
+            new ModeratorAnalysisViewer(moderatorAnalysisElement) : null;
 
         // Conversation state
         this.conversationId = this.loadOrCreateConversationId();
@@ -161,9 +171,8 @@ export class ChatApp {
 
         // Mode selector change
         if (this.modeSelector) {
-            this.modeSelector.onChange((mode) => {
-                this.isMultiAgentMode = mode === 'multi-agent';
-                this.updateMultiAgentUIVisibility();
+            this.modeSelector.onChange(async (mode) => {
+                await this.handleModeChange(mode);
             });
         }
 
@@ -501,6 +510,24 @@ export class ChatApp {
                 this.conversationId,
                 config,
                 {
+                    onPhaseChange: (phase, iteration) => {
+                        // Update moderator status indicator
+                        if (this.moderatorStatusIndicator) {
+                            this.moderatorStatusIndicator.update(phase, iteration);
+                        }
+                    },
+                    onModeratorInit: (analysis) => {
+                        console.log('Moderator init analysis:', analysis);
+                        if (this.moderatorAnalysisViewer) {
+                            this.moderatorAnalysisViewer.showInitAnalysis(analysis);
+                        }
+                    },
+                    onModeratorSynthesize: (iteration, analysis) => {
+                        console.log(`Moderator synthesize (iteration ${iteration}):`, analysis);
+                        if (this.moderatorAnalysisViewer) {
+                            this.moderatorAnalysisViewer.showSynthesisAnalysis(iteration, analysis);
+                        }
+                    },
                     onPhaseStart: (phase, iteration, msg) => {
                         console.log(`Phase: ${phase}, Iteration: ${iteration}`);
                         if (this.progressIndicator) {
@@ -553,6 +580,14 @@ export class ChatApp {
                             this.progressIndicator.complete(terminationReason);
                         }
 
+                        // Collapse moderator analysis and hide status
+                        if (this.moderatorAnalysisViewer) {
+                            this.moderatorAnalysisViewer.collapseAll();
+                        }
+                        if (this.moderatorStatusIndicator) {
+                            this.moderatorStatusIndicator.hide();
+                        }
+
                         // Hide agent status
                         this.hideAgentStatus();
                     },
@@ -589,6 +624,73 @@ export class ChatApp {
         } finally {
             this.setProcessing(false);
             this.messageInput.focus();
+        }
+    }
+
+    /**
+     * Handle mode change and transfer context if needed
+     */
+    async handleModeChange(mode) {
+        const targetMode = mode === 'multi-agent' ? 'debate' : 'simple';
+        const wasMultiAgent = this.isMultiAgentMode;
+        console.log(`[ModeSwitch] Attempting to switch from ${wasMultiAgent ? 'debate' : 'simple'} to ${targetMode}`);
+
+        // Update UI state first
+        this.isMultiAgentMode = mode === 'multi-agent';
+        this.updateMultiAgentUIVisibility();
+
+        // Check if mode actually changed
+        if (wasMultiAgent === this.isMultiAgentMode) {
+            console.log(`[ModeSwitch] Mode unchanged, no action needed`);
+            return;
+        }
+
+        try {
+            // Get config if switching to debate mode
+            const debateConfig = this.isMultiAgentMode && this.multiAgentConfig ?
+                this.multiAgentConfig.getConfig() : null;
+
+            console.log(`[ModeSwitch] Calling API to switch to ${targetMode} mode...`);
+
+            const response = await this.apiClient.switchMode(
+                this.conversationId,
+                targetMode,
+                debateConfig
+            );
+
+            console.log(`[ModeSwitch] API response:`, response);
+
+            if (response.success) {
+                console.log(`✓ Mode switched successfully`);
+                // Try to show system message, fallback to console if method not available
+                if (this.messageComponent.addSystemMessage) {
+                    this.messageComponent.addSystemMessage(
+                        `Switched to ${targetMode} mode. ${response.message || ''}`
+                    );
+                } else {
+                    console.log(`[ModeSwitch] Success: ${response.message || ''}`);
+                }
+            } else {
+                console.error('Mode switch failed:', response);
+                if (this.messageComponent.addErrorMessage) {
+                    this.messageComponent.addErrorMessage(`Failed to switch mode: ${response.message || 'Unknown error'}`);
+                } else {
+                    console.error(`[ModeSwitch] Failed: ${response.message || 'Unknown error'}`);
+                }
+                // Revert UI on failure
+                this.isMultiAgentMode = wasMultiAgent;
+                this.updateMultiAgentUIVisibility();
+            }
+        } catch (error) {
+            console.error('[ModeSwitch] Error switching mode:', error);
+            if (this.messageComponent.addErrorMessage) {
+                this.messageComponent.addErrorMessage(`Error switching mode: ${error.message}`);
+            } else {
+                console.error(`[ModeSwitch] Error: ${error.message}`);
+            }
+            // Revert UI state on error
+            this.isMultiAgentMode = wasMultiAgent;
+            this.updateMultiAgentUIVisibility();
         }
     }
 

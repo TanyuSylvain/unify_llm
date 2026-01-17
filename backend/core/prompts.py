@@ -18,6 +18,8 @@ Risk Mitigation Strategies are embedded in prompts:
 
 MODERATOR_INIT_PROMPT = """你是一位经验丰富的讨论主持人和问题分析专家。你的任务是分析用户的问题，评估其复杂度，并决定如何处理。
 
+{conversation_context}
+
 ## 用户问题
 {question}
 
@@ -134,6 +136,8 @@ MODERATOR_SYNTHESIZE_PROMPT = """你是讨论的主持人。现在需要你综�
 # =============================================================================
 
 EXPERT_GENERATE_PROMPT = """你是一位专业的领域专家。请针对给定的问题生成高质量的回答。
+
+{conversation_context}
 
 ## 原始问题
 {original_question}

@@ -48,6 +48,15 @@ export class MessageComponent {
     }
 
     /**
+     * Add a system message (info/status messages)
+     * @param {string} content - System message
+     * @returns {HTMLElement} Message element
+     */
+    addSystemMessage(content) {
+        return this.addMessage(content, 'system');
+    }
+
+    /**
      * Add a message to the chat
      * @param {string} content - Message content
      * @param {string} type - Message type (user, assistant, error)

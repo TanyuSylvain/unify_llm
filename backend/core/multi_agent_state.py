@@ -63,6 +63,9 @@ class MultiAgentState(TypedDict):
     # Previous iterations compressed summary
     previous_summary: str               # Compressed summary of earlier iterations
 
+    # Conversation context (for multi-round debates)
+    conversation_context: str           # Context from previous conversation turns
+
     # Moderator guidance
     current_task: str                   # Moderator's instructions to expert
     improvement_guidance: str           # Specific feedback for expert improvement
@@ -80,7 +83,9 @@ class MultiAgentState(TypedDict):
 
 def create_initial_state(
     question: str,
-    max_iterations: int = 3
+    max_iterations: int = 3,
+    previous_summary: str = "",
+    conversation_context: str = ""
 ) -> MultiAgentState:
     """Create initial state for a new debate workflow."""
     return MultiAgentState(
@@ -90,7 +95,8 @@ def create_initial_state(
         max_iterations=max_iterations,
         current_answer=None,
         current_review=None,
-        previous_summary="",
+        previous_summary=previous_summary,
+        conversation_context=conversation_context,
         current_task="",
         improvement_guidance="",
         final_answer=None,

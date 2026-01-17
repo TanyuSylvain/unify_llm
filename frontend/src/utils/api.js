@@ -329,9 +329,28 @@ export class APIClient {
      */
     _handleMultiAgentEvent(event, callbacks) {
         switch (event.type) {
+            case 'moderator_init':
+                if (callbacks.onModeratorInit) {
+                    callbacks.onModeratorInit(event.analysis);
+                }
+                if (callbacks.onPhaseChange) {
+                    callbacks.onPhaseChange('moderator_init', 0);
+                }
+                break;
+            case 'moderator_synthesize':
+                if (callbacks.onModeratorSynthesize) {
+                    callbacks.onModeratorSynthesize(event.iteration, event.analysis);
+                }
+                if (callbacks.onPhaseChange) {
+                    callbacks.onPhaseChange('moderator_synthesize', event.iteration);
+                }
+                break;
             case 'phase_start':
                 if (callbacks.onPhaseStart) {
                     callbacks.onPhaseStart(event.phase, event.iteration, event.message);
+                }
+                if (callbacks.onPhaseChange) {
+                    callbacks.onPhaseChange(event.phase, event.iteration);
                 }
                 break;
             case 'expert_answer':
@@ -352,6 +371,9 @@ export class APIClient {
             case 'done':
                 if (callbacks.onDone) {
                     callbacks.onDone(event.final_answer, event.was_direct_answer, event.termination_reason, event.total_iterations);
+                }
+                if (callbacks.onPhaseChange) {
+                    callbacks.onPhaseChange('done', 0);
                 }
                 break;
             case 'error':
@@ -395,6 +417,63 @@ export class APIClient {
             return await response.json();
         } catch (error) {
             console.error('Error sending multi-agent message:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get conversation information
+     * @param {string} conversationId - Conversation ID
+     * @returns {Promise<Object>} Conversation metadata
+     */
+    async getConversationInfo(conversationId) {
+        try {
+            const response = await fetch(
+                `${this.baseURL}/conversations/${conversationId}/info`
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to get conversation info');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error getting conversation info:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Switch conversation mode between simple and debate
+     * @param {string} conversationId - Conversation ID
+     * @param {string} targetMode - Target mode ('simple' or 'debate')
+     * @param {Object} modelConfig - Model configuration for debate mode (optional)
+     * @returns {Promise<Object>} Response object
+     */
+    async switchMode(conversationId, targetMode, modelConfig = null) {
+        try {
+            const body = {
+                target_mode: targetMode,
+                debate_config: modelConfig
+            };
+
+            const response = await fetch(
+                `${this.baseURL}/conversations/${conversationId}/switch-mode`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                }
+            );
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to switch mode');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error switching mode:', error);
             throw error;
         }
     }

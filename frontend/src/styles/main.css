@@ -636,6 +636,14 @@ body {
     color: #c00;
 }
 
+.message.system {
+    background: #e3f2fd;
+    color: #1565c0;
+    font-style: italic;
+    border-left: 3px solid #2196f3;
+    padding-left: 12px;
+}
+
 /* Markdown Styling in Messages */
 .message.assistant pre {
     background: #f4f4f4;
@@ -1400,4 +1408,202 @@ body {
     font-size: 0.9rem;
     line-height: 1.6;
     white-space: pre-wrap;
+}
+
+/* ========================================
+   Moderator Status Indicator
+   ======================================== */
+
+.moderator-status-indicator {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* ========================================
+   Moderator Analysis Card
+   ======================================== */
+
+.moderator-analysis-card {
+    background: #f8f9fa;
+    border-left: 4px solid #6c757d;
+    margin: 0.75rem 0;
+    border-radius: 6px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.moderator-analysis-card.expanded {
+    border-left-color: #667eea;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.moderator-analysis-card.collapsed {
+    border-left-color: #adb5bd;
+}
+
+.moderator-analysis-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #e9ecef;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+}
+
+.moderator-analysis-header:hover {
+    background: #dee2e6;
+}
+
+.moderator-analysis-title {
+    font-size: 0.95rem;
+    color: #495057;
+}
+
+.moderator-analysis-title strong {
+    color: #212529;
+}
+
+.toggle-icon {
+    font-size: 0.75rem;
+    color: #6c757d;
+    transition: transform 0.3s ease;
+}
+
+.moderator-analysis-content {
+    padding: 1rem;
+    background: #ffffff;
+}
+
+.analysis-section {
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.analysis-field {
+    margin-bottom: 0.75rem;
+}
+
+.analysis-field:last-child {
+    margin-bottom: 0;
+}
+
+.analysis-field strong {
+    color: #495057;
+    font-weight: 600;
+}
+
+.analysis-field ul {
+    margin: 0.5rem 0 0 1.5rem;
+    padding: 0;
+}
+
+.analysis-field li {
+    margin: 0.25rem 0;
+    color: #6c757d;
+}
+
+.valid-issues {
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    background: #d4edda;
+    border-left: 3px solid #28a745;
+    border-radius: 4px;
+}
+
+.valid-issues em {
+    color: #155724;
+    font-weight: 600;
+}
+
+.valid-issues ul {
+    margin-top: 0.5rem;
+}
+
+.valid-issues li {
+    color: #155724;
+}
+
+.invalid-issues {
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    background: #fff3cd;
+    border-left: 3px solid #ffc107;
+    border-radius: 4px;
+}
+
+.invalid-issues em {
+    color: #856404;
+    font-weight: 600;
+}
+
+.invalid-issues ul {
+    margin-top: 0.5rem;
+}
+
+.invalid-issues li {
+    color: #856404;
+}
+
+/* Badge Styles */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+}
+
+.badge-success {
+    color: #fff;
+    background-color: #28a745;
+}
+
+.badge-warning {
+    color: #212529;
+    background-color: #ffc107;
+}
+
+.badge-danger {
+    color: #fff;
+    background-color: #dc3545;
+}
+
+.badge-info {
+    color: #fff;
+    background-color: #17a2b8;
+}
+
+.badge-secondary {
+    color: #fff;
+    background-color: #6c757d;
+}
+
+.termination-reason {
+    font-size: 0.8rem;
+    color: #6c757d;
+    font-style: italic;
 }

@@ -16,13 +16,16 @@ from backend.api.schemas import (
     MultiAgentModelConfig
 )
 from backend.core.multi_agent import MultiAgentDebateWorkflow
-from backend.storage import MemoryStorage
+from backend.storage import get_storage
 from backend.config import settings
 
 router = APIRouter(prefix="/chat/multi-agent", tags=["multi-agent-chat"])
 
 # Shared storage instance
-_storage = MemoryStorage()
+_storage = get_storage(
+    backend=settings.storage_backend,
+    database_url=settings.database_url
+)
 
 # Workflow pool (keyed by model combination)
 _workflows: dict[str, MultiAgentDebateWorkflow] = {}

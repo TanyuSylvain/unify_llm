@@ -12,6 +12,7 @@ Uses LangGraph for workflow orchestration with sliding window memory management.
 import json
 import re
 import logging
+from datetime import datetime
 from typing import Optional, AsyncGenerator, Literal
 
 from langgraph.graph import StateGraph, END
@@ -167,7 +168,15 @@ class MultiAgentDebateWorkflow:
         Returns:
             Updated state with complexity assessment and routing decision
         """
-        prompt = MODERATOR_INIT_PROMPT.format(question=state["original_question"])
+        # Format conversation context if present
+        conversation_context = ""
+        if state.get("conversation_context"):
+            conversation_context = f"## 对话上下文\n\n{state['conversation_context']}\n"
+
+        prompt = MODERATOR_INIT_PROMPT.format(
+            question=state["original_question"],
+            conversation_context=conversation_context
+        )
 
         response = self.moderator_llm.invoke([{"role": "user", "content": prompt}])
         result = extract_json_from_response(response.content)
@@ -189,14 +198,28 @@ class MultiAgentDebateWorkflow:
                 "complexity": complexity,
                 "final_answer": result["direct_answer"],
                 "status": "direct_answer",
-                "termination_reason": "simple_question"
+                "termination_reason": "simple_question",
+                "moderator_init_analysis": {
+                    "intent": result.get("intent"),
+                    "key_constraints": result.get("key_constraints"),
+                    "complexity": complexity,
+                    "complexity_reason": result.get("complexity_reason"),
+                    "decision": decision
+                }
             }
         else:
             # Complex question - delegate to expert
             return {
                 "complexity": complexity,
                 "current_task": result.get("task_for_expert", f"请全面分析和回答: {state['original_question']}"),
-                "iteration": 1
+                "iteration": 1,
+                "moderator_init_analysis": {
+                    "intent": result.get("intent"),
+                    "key_constraints": result.get("key_constraints"),
+                    "complexity": complexity,
+                    "complexity_reason": result.get("complexity_reason"),
+                    "decision": decision
+                }
             }
 
     def _expert_generate_node(self, state: MultiAgentState) -> dict:
@@ -234,13 +257,19 @@ class MultiAgentDebateWorkflow:
             )
             iteration_guidance = EXPERT_SUBSEQUENT_ITERATION_GUIDANCE
 
+        # Format conversation context if present
+        conversation_context = ""
+        if state.get("conversation_context"):
+            conversation_context = f"## 对话上下文\n\n{state['conversation_context']}\n"
+
         prompt = EXPERT_GENERATE_PROMPT.format(
             original_question=state["original_question"],
             current_task=state["current_task"],
             iteration=state["iteration"],
             is_first_iteration="是" if is_first else "否",
             improvement_section=improvement_section,
-            iteration_guidance=iteration_guidance
+            iteration_guidance=iteration_guidance,
+            conversation_context=conversation_context
         )
 
         response = self.expert_llm.invoke([{"role": "user", "content": prompt}])
@@ -353,7 +382,14 @@ class MultiAgentDebateWorkflow:
                 "status": "completed",
                 "final_answer": final_answer,
                 "termination_reason": termination_reason,
-                "previous_summary": state.get("previous_summary", "") + "\n" + result.get("iteration_summary", "")
+                "previous_summary": state.get("previous_summary", "") + "\n" + result.get("iteration_summary", ""),
+                "moderator_synthesize_analysis": {
+                    "feedback_validation": result.get("feedback_validation"),
+                    "decision": result.get("decision"),
+                    "improvement_guidance": result.get("improvement_guidance"),
+                    "iteration_summary": result.get("iteration_summary"),
+                    "termination_reason": termination_reason
+                }
             }
         else:
             # Continue iteration
@@ -365,8 +401,103 @@ class MultiAgentDebateWorkflow:
                 "iteration": iteration + 1,
                 "improvement_guidance": result.get("improvement_guidance", "请继续改进回答。"),
                 "previous_summary": new_summary.strip(),
-                "current_task": result.get("improvement_guidance", state["current_task"])
+                "current_task": result.get("improvement_guidance", state["current_task"]),
+                "moderator_synthesize_analysis": {
+                    "feedback_validation": result.get("feedback_validation"),
+                    "decision": result.get("decision"),
+                    "improvement_guidance": result.get("improvement_guidance"),
+                    "iteration_summary": result.get("iteration_summary"),
+                    "termination_reason": None
+                }
             }
+
+    async def _load_debate_state(
+        self,
+        conversation_id: str
+    ) -> Optional[dict]:
+        """
+        Load previous debate state from storage.
+
+        Args:
+            conversation_id: Conversation ID
+
+        Returns:
+            Debate state dict or None
+        """
+        conversation = await self.storage.get_conversation(conversation_id)
+        if not conversation:
+            return None
+
+        metadata = conversation.get("metadata", {})
+        return metadata.get("debate_state")
+
+    async def _save_debate_state(
+        self,
+        conversation_id: str,
+        state: dict
+    ) -> None:
+        """
+        Save debate state for next round.
+
+        Args:
+            conversation_id: Conversation ID
+            state: Current debate state
+        """
+        debate_state = {
+            "previous_summary": state.get("previous_summary", ""),
+            "last_iteration": state.get("iteration", 0),
+            "conversation_context": await self._build_conversation_context(conversation_id),
+            "timestamp": datetime.now().isoformat()
+        }
+
+        await self.storage.update_debate_state(conversation_id, debate_state)
+
+    async def _build_conversation_context(
+        self,
+        conversation_id: str,
+        limit: int = 5
+    ) -> str:
+        """
+        Build context summary from recent conversation history.
+
+        Args:
+            conversation_id: Conversation ID
+            limit: Maximum number of message pairs to include
+
+        Returns:
+            Formatted context string
+        """
+        messages = await self.storage.get_messages(conversation_id)
+
+        # Filter to user/assistant messages (exclude debate internals)
+        user_assistant_messages = [
+            msg for msg in messages
+            if msg.get("role") in ("user", "assistant")
+            and msg.get("message_type") in (None, "user_query", "final_answer")
+        ]
+
+        # Take last N message pairs
+        recent_messages = user_assistant_messages[-(limit * 2):]
+
+        if not recent_messages:
+            return ""
+
+        # Format as conversation context
+        context_lines = []
+        for msg in recent_messages:
+            role = msg.get("role", "unknown")
+            content = msg.get("content", "")
+
+            # Truncate very long messages
+            if len(content) > 500:
+                content = content[:500] + "..."
+
+            if role == "user":
+                context_lines.append(f"User: {content}")
+            elif role == "assistant":
+                context_lines.append(f"Assistant: {content}")
+
+        return "\n".join(context_lines) if context_lines else ""
 
     async def stream(
         self,
@@ -394,16 +525,24 @@ class MultiAgentDebateWorkflow:
                 conversation_id=conversation_id,
                 role="user",
                 content=question,
-                model=self.moderator_model
+                model=self.moderator_model,
+                message_type="user_query"
             )
             if is_new_conversation:
                 title = question[:50] + "..." if len(question) > 50 else question
                 await self.storage.update_conversation_title(conversation_id, title)
 
-        # Create initial state
+        # Load previous debate state if exists
+        debate_state = None
+        if conversation_id and not is_new_conversation:
+            debate_state = await self._load_debate_state(conversation_id)
+
+        # Create initial state with context
         initial_state = create_initial_state(
             question=question,
-            max_iterations=self.max_iterations
+            max_iterations=self.max_iterations,
+            previous_summary=debate_state.get("previous_summary", "") if debate_state else "",
+            conversation_context=debate_state.get("conversation_context", "") if debate_state else ""
         )
 
         try:
@@ -422,6 +561,22 @@ class MultiAgentDebateWorkflow:
             result = self.graph.nodes["moderator_init"].invoke(current_state)
             current_state = {**current_state, **result}
 
+            # Emit moderator init analysis
+            if "moderator_init_analysis" in current_state:
+                yield {
+                    "type": "moderator_init",
+                    "analysis": current_state["moderator_init_analysis"]
+                }
+                # Store analysis as message
+                if conversation_id:
+                    await self.storage.add_message(
+                        conversation_id=conversation_id,
+                        role="system",
+                        content=json.dumps(current_state["moderator_init_analysis"], ensure_ascii=False),
+                        message_type="moderator_init",
+                        metadata={"analysis": current_state["moderator_init_analysis"]}
+                    )
+
             # Check if direct answer
             if current_state.get("status") == "direct_answer":
                 yield {
@@ -431,14 +586,17 @@ class MultiAgentDebateWorkflow:
                     "termination_reason": "simple_question",
                     "total_iterations": 0
                 }
-                # Store final answer
+                # Store final answer and save debate state
                 if conversation_id:
                     await self.storage.add_message(
                         conversation_id=conversation_id,
                         role="assistant",
                         content=current_state["final_answer"],
-                        model=self.moderator_model
+                        model=self.moderator_model,
+                        message_type="final_answer"
                     )
+                    # Save debate state for next round (even for direct answers)
+                    await self._save_debate_state(conversation_id, current_state)
                 return
 
             # Expert-Critic loop
@@ -490,6 +648,24 @@ class MultiAgentDebateWorkflow:
                 result = self.graph.nodes["moderator_synthesize"].invoke(current_state)
                 current_state = {**current_state, **result}
 
+                # Emit moderator synthesize analysis
+                if "moderator_synthesize_analysis" in current_state:
+                    yield {
+                        "type": "moderator_synthesize",
+                        "iteration": iteration,
+                        "analysis": current_state["moderator_synthesize_analysis"]
+                    }
+                    # Store analysis as message
+                    if conversation_id:
+                        await self.storage.add_message(
+                            conversation_id=conversation_id,
+                            role="system",
+                            content=json.dumps(current_state["moderator_synthesize_analysis"], ensure_ascii=False),
+                            message_type="moderator_synthesize",
+                            iteration=iteration,
+                            metadata={"analysis": current_state["moderator_synthesize_analysis"]}
+                        )
+
                 yield {
                     "type": "iteration_complete",
                     "iteration": iteration,
@@ -507,14 +683,17 @@ class MultiAgentDebateWorkflow:
                 "total_iterations": current_state.get("iteration", 1)
             }
 
-            # Store final answer
+            # Store final answer and save debate state
             if conversation_id:
                 await self.storage.add_message(
                     conversation_id=conversation_id,
                     role="assistant",
                     content=current_state["final_answer"],
-                    model=self.expert_model
+                    model=self.expert_model,
+                    message_type="final_answer"
                 )
+                # Save debate state for next round
+                await self._save_debate_state(conversation_id, current_state)
 
         except Exception as e:
             logger.error(f"Multi-agent workflow error: {e}")

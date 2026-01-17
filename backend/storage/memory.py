@@ -28,7 +28,10 @@ class MemoryStorage(ConversationStorage):
         conversation_id: str,
         role: str,
         content: str,
-        model: Optional[str] = None
+        model: Optional[str] = None,
+        message_type: Optional[str] = None,
+        iteration: Optional[int] = None,
+        metadata: Optional[Dict] = None
     ) -> None:
         """Add a message to a conversation."""
         # Create conversation if it doesn't exist
@@ -46,6 +49,12 @@ class MemoryStorage(ConversationStorage):
         }
         if model and role == "assistant":
             message["model"] = model
+        if message_type:
+            message["message_type"] = message_type
+        if iteration is not None:
+            message["iteration"] = iteration
+        if metadata:
+            message["metadata"] = metadata
 
         self._messages[conversation_id].append(message)
 
@@ -58,6 +67,7 @@ class MemoryStorage(ConversationStorage):
         conversation_id: str,
         model: str,
         metadata: Optional[Dict] = None,
+        mode: str = "simple",
         title: Optional[str] = None
     ) -> None:
         """Create a new conversation."""
@@ -67,6 +77,7 @@ class MemoryStorage(ConversationStorage):
         self._conversations[conversation_id] = {
             "id": conversation_id,
             "model": model,
+            "mode": mode,
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
             "message_count": 0,
@@ -125,3 +136,42 @@ class MemoryStorage(ConversationStorage):
         """Clear all conversations (useful for testing)."""
         self._conversations.clear()
         self._messages.clear()
+
+    async def update_conversation_metadata(
+        self,
+        conversation_id: str,
+        metadata: Dict
+    ) -> bool:
+        """Update conversation metadata."""
+        if conversation_id not in self._conversations:
+            return False
+
+        # Extract mode if present in metadata
+        mode = metadata.pop("mode", None)
+        if mode:
+            self._conversations[conversation_id]["mode"] = mode
+
+        # Merge metadata
+        existing_metadata = self._conversations[conversation_id].get("metadata", {})
+        merged_metadata = {**existing_metadata, **metadata}
+        self._conversations[conversation_id]["metadata"] = merged_metadata
+        self._conversations[conversation_id]["updated_at"] = datetime.now().isoformat()
+        return True
+
+    async def update_debate_state(
+        self,
+        conversation_id: str,
+        debate_state: Dict
+    ) -> bool:
+        """Update debate state in conversation metadata."""
+        return await self.update_conversation_metadata(
+            conversation_id,
+            {"debate_state": debate_state}
+        )
+
+    async def get_debate_state(self, conversation_id: str) -> Optional[Dict]:
+        """Get debate state from conversation metadata."""
+        if conversation_id not in self._conversations:
+            return None
+
+        return self._conversations[conversation_id].get("metadata", {}).get("debate_state")

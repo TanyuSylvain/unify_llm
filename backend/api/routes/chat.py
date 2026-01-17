@@ -8,13 +8,16 @@ from fastapi.responses import StreamingResponse
 
 from backend.api.schemas import ChatRequest, ChatResponse
 from backend.core.agent import LangGraphAgent
-from backend.storage import MemoryStorage
+from backend.storage import get_storage
 from backend.config import settings
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 # Shared storage instance for all agents
-_storage = MemoryStorage()
+_storage = get_storage(
+    backend=settings.storage_backend,
+    database_url=settings.database_url
+)
 
 # Agent pool (keyed by model_id + thinking mode)
 _agents: dict[str, LangGraphAgent] = {}

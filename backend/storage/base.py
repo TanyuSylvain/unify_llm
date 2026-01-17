@@ -53,16 +53,24 @@ class ConversationStorage(ABC):
         conversation_id: str,
         role: str,
         content: str,
-        model: Optional[str] = None
+        model: Optional[str] = None,
+        message_type: Optional[str] = None,
+        iteration: Optional[int] = None,
+        metadata: Optional[Dict] = None
     ) -> None:
         """
         Add a message to a conversation.
 
         Args:
             conversation_id: Unique conversation identifier
-            role: Message role ('user' or 'assistant')
+            role: Message role ('user', 'assistant', 'system')
             content: Message content
-            model: Model used for assistant responses (optional)
+            model: Model used for this message (optional)
+            message_type: Type of message (optional)
+                - 'user_query', 'final_answer', 'moderator_init',
+                  'moderator_synthesize', 'expert_answer', 'critic_review'
+            iteration: Debate iteration number (optional)
+            metadata: Additional metadata (optional)
         """
         pass
 
@@ -71,7 +79,9 @@ class ConversationStorage(ABC):
         self,
         conversation_id: str,
         model: str,
-        metadata: Optional[Dict] = None
+        metadata: Optional[Dict] = None,
+        mode: str = "simple",
+        title: Optional[str] = None
     ) -> None:
         """
         Create a new conversation.
@@ -80,6 +90,8 @@ class ConversationStorage(ABC):
             conversation_id: Unique conversation identifier
             model: Model ID used for this conversation
             metadata: Additional metadata (optional)
+            mode: Conversation mode ('simple' or 'debate')
+            title: Conversation title (optional)
         """
         pass
 
@@ -152,5 +164,54 @@ class ConversationStorage(ABC):
 
         Returns:
             Number of conversations deleted
+        """
+        pass
+
+    @abstractmethod
+    async def update_conversation_metadata(
+        self,
+        conversation_id: str,
+        metadata: Dict
+    ) -> bool:
+        """
+        Update conversation metadata.
+
+        Args:
+            conversation_id: Unique conversation identifier
+            metadata: New metadata to merge with existing
+
+        Returns:
+            True if updated, False if conversation not found
+        """
+        pass
+
+    @abstractmethod
+    async def update_debate_state(
+        self,
+        conversation_id: str,
+        debate_state: Dict
+    ) -> bool:
+        """
+        Update debate state in conversation metadata.
+
+        Args:
+            conversation_id: Unique conversation identifier
+            debate_state: Debate state to store
+
+        Returns:
+            True if updated, False if conversation not found
+        """
+        pass
+
+    @abstractmethod
+    async def get_debate_state(self, conversation_id: str) -> Optional[Dict]:
+        """
+        Get debate state from conversation metadata.
+
+        Args:
+            conversation_id: Unique conversation identifier
+
+        Returns:
+            Debate state dict or None
         """
         pass

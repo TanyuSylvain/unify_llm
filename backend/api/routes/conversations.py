@@ -9,9 +9,12 @@ from backend.api.schemas import (
     ConversationsResponse,
     ConversationInfo,
     ConversationHistoryResponse,
-    MessageInfo
+    MessageInfo,
+    SwitchModeRequest,
+    SwitchModeResponse
 )
 from backend.storage import MemoryStorage
+from backend.core.conversation_mode_manager import ConversationModeManager
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -111,3 +114,39 @@ async def get_conversation_info(conversation_id: str):
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     return ConversationInfo(**conversation)
+
+
+@router.post("/{conversation_id}/switch-mode", response_model=SwitchModeResponse)
+async def switch_mode(conversation_id: str, request: SwitchModeRequest):
+    """
+    Switch conversation mode between simple and debate.
+
+    Args:
+        conversation_id: Conversation ID
+        request: Mode switch request with target mode and optional config
+
+    Returns:
+        Switch mode response with success status
+    """
+    # Validate target mode
+    if request.target_mode not in ("simple", "debate"):
+        raise HTTPException(
+            status_code=400,
+            detail="target_mode must be 'simple' or 'debate'"
+        )
+
+    # Create mode manager
+    mode_manager = ConversationModeManager(_storage)
+
+    try:
+        result = await mode_manager.switch_mode(
+            conversation_id=conversation_id,
+            target_mode=request.target_mode,
+            model_config=request.debate_config
+        )
+        return SwitchModeResponse(**result)
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

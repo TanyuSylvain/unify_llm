@@ -37,8 +37,8 @@ class Settings(BaseSettings):
     minimax_base_url: str = "https://api.minimax.io/v1"
 
     # Storage Configuration
-    storage_backend: str = "memory"  # Options: memory, sqlite, redis
-    database_url: Optional[str] = None
+    storage_backend: str = "sqlite"  # Options: memory, sqlite, redis
+    database_url: Optional[str] = "conversations.db"
     redis_url: Optional[str] = None
 
     # Multi-Agent Configuration
