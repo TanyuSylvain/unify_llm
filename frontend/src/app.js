@@ -14,7 +14,6 @@ import { MultiAgentConfig } from './components/MultiAgentConfig.js';
 import { ProgressIndicator } from './components/ProgressIndicator.js';
 import { DebateViewer } from './components/DebateViewer.js';
 import ModeratorStatusIndicator from './components/ModeratorStatusIndicator.js';
-import ModeratorAnalysisViewer from './components/ModeratorAnalysisViewer.js';
 
 export class ChatApp {
     constructor() {
@@ -79,17 +78,16 @@ export class ChatApp {
             this.progressIndicator = new ProgressIndicator(this.progressIndicatorElement);
         }
 
-        if (this.debateViewerElement) {
-            this.debateViewer = new DebateViewer(this.debateViewerElement);
-        }
-
         // Initialize moderator components
         const moderatorStatusElement = document.getElementById('moderatorStatus');
-        const moderatorAnalysisElement = document.getElementById('moderatorAnalysis');
+        const moderatorInitElement = document.getElementById('moderatorInit');
         this.moderatorStatusIndicator = moderatorStatusElement ?
             new ModeratorStatusIndicator(moderatorStatusElement) : null;
-        this.moderatorAnalysisViewer = moderatorAnalysisElement ?
-            new ModeratorAnalysisViewer(moderatorAnalysisElement) : null;
+
+        // Initialize debate viewer with moderator init container
+        if (this.debateViewerElement) {
+            this.debateViewer = new DebateViewer(this.debateViewerElement, moderatorInitElement);
+        }
 
         // Conversation state
         this.conversationId = this.loadOrCreateConversationId();
@@ -517,15 +515,21 @@ export class ChatApp {
                         }
                     },
                     onModeratorInit: (analysis) => {
-                        console.log('Moderator init analysis:', analysis);
-                        if (this.moderatorAnalysisViewer) {
-                            this.moderatorAnalysisViewer.showInitAnalysis(analysis);
+                        console.log('[Debug] onModeratorInit called');
+                        if (this.debateViewer) {
+                            this.debateViewer.setModeratorInit(analysis);
+                            console.log('[Debug] setModeratorInit complete');
+                        } else {
+                            console.log('[Debug] debateViewer is null!');
                         }
                     },
                     onModeratorSynthesize: (iteration, analysis) => {
-                        console.log(`Moderator synthesize (iteration ${iteration}):`, analysis);
-                        if (this.moderatorAnalysisViewer) {
-                            this.moderatorAnalysisViewer.showSynthesisAnalysis(iteration, analysis);
+                        console.log(`[Debug] onModeratorSynthesize called for iteration ${iteration}`);
+                        if (this.debateViewer) {
+                            this.debateViewer.addModeratorSynthesis(iteration, analysis);
+                            console.log('[Debug] addModeratorSynthesis complete');
+                        } else {
+                            console.log('[Debug] debateViewer is null!');
                         }
                     },
                     onPhaseStart: (phase, iteration, msg) => {
@@ -580,9 +584,10 @@ export class ChatApp {
                             this.progressIndicator.complete(terminationReason);
                         }
 
-                        // Collapse moderator analysis and hide status
-                        if (this.moderatorAnalysisViewer) {
-                            this.moderatorAnalysisViewer.collapseAll();
+                        // Collapse moderator init and hide status
+                        if (this.debateViewer) {
+                            this.debateViewer.moderatorInitExpanded = false;
+                            this.debateViewer.renderModeratorInit();
                         }
                         if (this.moderatorStatusIndicator) {
                             this.moderatorStatusIndicator.hide();

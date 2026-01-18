@@ -1,13 +1,17 @@
 /**
  * Debate Viewer Component
- * Displays the multi-agent debate timeline with expert answers and critic reviews
+ * Displays the multi-agent debate timeline with expert answers, critic reviews,
+ * and moderator analysis
  */
 
 export class DebateViewer {
-    constructor(containerElement) {
+    constructor(containerElement, moderatorInitElement = null) {
         this.container = containerElement;
+        this.moderatorInitElement = moderatorInitElement;
+        this.moderatorInitExpanded = true; // Moderator init starts expanded
+        this.moderatorInitAnalysis = null;
         this.iterations = [];
-        this.expandedCard = null; // Track which card is currently expanded
+        this.expandedCard = null; // Track which round card is currently expanded
     }
 
     /**
@@ -23,6 +27,9 @@ export class DebateViewer {
     clear() {
         this.iterations = [];
         this.expandedCard = null;
+        this.moderatorInitAnalysis = null;
+        this.moderatorInitExpanded = true;
+        this.renderModeratorInit();
         this.render();
     }
 
@@ -46,12 +53,103 @@ export class DebateViewer {
     }
 
     /**
+     * Render moderator init analysis card
+     */
+    renderModeratorInit() {
+        if (!this.moderatorInitElement) return;
+
+        if (!this.moderatorInitAnalysis) {
+            this.moderatorInitElement.innerHTML = '';
+            this.moderatorInitElement.style.display = 'none';
+            return;
+        }
+
+        this.moderatorInitElement.style.display = 'block';
+        const analysis = this.moderatorInitAnalysis;
+        const intent = analysis.intent || 'N/A';
+        const keyConstraints = analysis.key_constraints || analysis.keyConstraints || [];
+        const complexity = analysis.complexity || 'unknown';
+        const complexityReason = analysis.complexity_reason || analysis.complexityReason || 'N/A';
+        const decision = analysis.decision || 'unknown';
+
+        // Get badges
+        const complexityBadge = this.getComplexityBadge(complexity);
+        const decisionBadge = this.getDecisionBadge(decision);
+
+        // Format key constraints
+        const constraintsHtml = keyConstraints.length > 0
+            ? `<ul>${keyConstraints.map(c => `<li>${this.escapeHtml(c)}</li>`).join('')}</ul>`
+            : '<p>None identified</p>';
+
+        this.moderatorInitElement.innerHTML = `
+            <div class="moderator-init-card ${this.moderatorInitExpanded ? 'expanded' : ''}" id="moderatorInitCard">
+                <div class="moderator-init-header" id="moderatorInitHeader">
+                    <span class="moderator-init-title">🤔 Moderator Initial Analysis</span>
+                    <span class="moderator-init-toggle">${this.moderatorInitExpanded ? '▲' : '▼'}</span>
+                </div>
+                ${this.moderatorInitExpanded ? `
+                <div class="moderator-init-content">
+                    <div class="moderator-field"><strong>Intent:</strong> ${this.escapeHtml(intent)}</div>
+                    <div class="moderator-field"><strong>Key Constraints:</strong> ${constraintsHtml}</div>
+                    <div class="moderator-field"><strong>Complexity:</strong> ${complexityBadge} ${this.escapeHtml(complexityReason)}</div>
+                    <div class="moderator-field"><strong>Decision:</strong> ${decisionBadge}</div>
+                </div>
+                ` : ''}
+            </div>
+        `;
+
+        // Set up toggle event
+        const header = this.moderatorInitElement.querySelector('#moderatorInitHeader');
+        if (header) {
+            header.addEventListener('click', () => {
+                this.moderatorInitExpanded = !this.moderatorInitExpanded;
+                this.renderModeratorInit();
+            });
+        }
+    }
+
+    /**
+     * Get complexity badge HTML
+     */
+    getComplexityBadge(complexity) {
+        const badges = {
+            'simple': '<span class="badge badge-success">Simple</span>',
+            'moderate': '<span class="badge badge-warning">Moderate</span>',
+            'complex': '<span class="badge badge-danger">Complex</span>'
+        };
+        return badges[complexity] || `<span class="badge badge-secondary">${complexity}</span>`;
+    }
+
+    /**
+     * Get decision badge HTML
+     */
+    getDecisionBadge(decision) {
+        const badges = {
+            'direct_answer': '<span class="badge badge-success">Direct Answer</span>',
+            'delegate_expert': '<span class="badge badge-info">Delegate to Expert</span>'
+        };
+        return badges[decision] || `<span class="badge badge-secondary">${decision}</span>`;
+    }
+
+    /**
+     * Get synthesis decision badge
+     */
+    getSynthesisDecisionBadge(decision) {
+        if (decision === 'end') {
+            return '<span class="badge badge-success">End Debate</span>';
+        }
+        return '<span class="badge badge-info">Continue</span>';
+    }
+
+    /**
      * Render all iterations as accordion cards
      */
     renderIterations() {
         return this.iterations.map((iteration, index) => {
             const isExpanded = this.expandedCard === index;
             const nextRound = index + 1 < this.iterations.length ? `Round ${index + 2}` : null;
+            const synthesis = iteration.synthesis;
+
             return `
             <div class="round-card ${isExpanded ? 'expanded' : ''}" data-iteration="${index + 1}">
                 <div class="round-card-header" data-iteration="${index + 1}">
@@ -65,12 +163,61 @@ export class DebateViewer {
                         ${iteration.answer ? this.renderExpertAnswer(iteration.answer) : ''}
                         ${iteration.review ? this.renderCriticReview(iteration.review) : ''}
                     </div>
+                    ${synthesis ? this.renderModeratorSynthesis(synthesis, index + 1) : ''}
                     ${nextRound ? `<div class="next-round-indicator" data-next="${index + 2}">Next: ${nextRound} ▾</div>` : ''}
                 </div>
                 ` : ''}
             </div>
         `;
         }).join('');
+    }
+
+    /**
+     * Render moderator synthesis feedback for a round
+     */
+    renderModeratorSynthesis(synthesis, roundNumber) {
+        const decision = synthesis.decision || 'unknown';
+        const feedback = synthesis.feedback_validation || {};
+        const guidance = synthesis.improvement_guidance;
+        const summary = synthesis.iteration_summary;
+
+        const decisionBadge = this.getSynthesisDecisionBadge(decision);
+
+        // Format valid issues
+        const validIssues = feedback.valid_issues || [];
+        const invalidIssues = feedback.invalid_issues || [];
+
+        let issuesHtml = '';
+        if (validIssues.length > 0 || invalidIssues.length > 0) {
+            issuesHtml = '<div class="synthesis-issues">';
+            if (validIssues.length > 0) {
+                issuesHtml += '<div class="valid-issues"><em>Valid Issues:</em><ul>';
+                validIssues.forEach(issue => {
+                    issuesHtml += `<li>${this.escapeHtml(issue)}</li>`;
+                });
+                issuesHtml += '</ul></div>';
+            }
+            if (invalidIssues.length > 0) {
+                issuesHtml += '<div class="invalid-issues"><em>Invalid Criticisms:</em><ul>';
+                invalidIssues.forEach(issue => {
+                    issuesHtml += `<li>${this.escapeHtml(issue)}</li>`;
+                });
+                issuesHtml += '</ul></div>';
+            }
+            issuesHtml += '</div>';
+        }
+
+        return `
+            <div class="moderator-synthesis-card">
+                <div class="moderator-synthesis-header">⚖️ Moderator Feedback</div>
+                <div class="moderator-synthesis-content">
+                    <div class="synthesis-field"><strong>Decision:</strong> ${decisionBadge}</div>
+                    ${issuesHtml}
+                    ${guidance && decision === 'continue' ? `<div class="synthesis-field"><strong>Improvement:</strong> ${this.escapeHtml(guidance)}</div>` : ''}
+                    ${summary ? `<div class="synthesis-field"><strong>Summary:</strong> ${this.escapeHtml(summary)}</div>` : ''}
+                </div>
+            </div>
+        `;
     }
 
     /**
@@ -264,6 +411,29 @@ export class DebateViewer {
             this.iterations.push({});
         }
         this.iterations[iteration - 1].review = review;
+        this.render();
+    }
+
+    /**
+     * Set moderator initial analysis
+     * @param {Object} analysis - Moderator init analysis object
+     */
+    setModeratorInit(analysis) {
+        this.moderatorInitAnalysis = analysis;
+        this.moderatorInitExpanded = true;
+        this.renderModeratorInit();
+    }
+
+    /**
+     * Add moderator synthesis for an iteration
+     * @param {number} iteration - Iteration number
+     * @param {Object} synthesis - Moderator synthesis analysis object
+     */
+    addModeratorSynthesis(iteration, synthesis) {
+        while (this.iterations.length < iteration) {
+            this.iterations.push({});
+        }
+        this.iterations[iteration - 1].synthesis = synthesis;
         this.render();
     }
 

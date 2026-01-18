@@ -1438,130 +1438,152 @@ body {
 }
 
 /* ========================================
-   Moderator Analysis Card
+   Moderator Init Card (in debate panel)
    ======================================== */
 
-.moderator-analysis-card {
-    background: #f8f9fa;
-    border-left: 4px solid #6c757d;
-    margin: 0.75rem 0;
+.moderator-init-container {
+    width: 100%;
+    padding: 0.5rem;
+    display: none;
+}
+
+.moderator-init-card {
+    background: #f3e5f5;
+    border-left: 4px solid #9c27b0;
     border-radius: 6px;
     overflow: hidden;
     transition: all 0.3s ease;
 }
 
-.moderator-analysis-card.expanded {
-    border-left-color: #667eea;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.moderator-init-card.expanded {
+    border-left-color: #7b1fa2;
+    box-shadow: 0 2px 8px rgba(156, 39, 176, 0.2);
 }
 
-.moderator-analysis-card.collapsed {
-    border-left-color: #adb5bd;
-}
-
-.moderator-analysis-header {
+.moderator-init-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem;
-    background: #e9ecef;
+    padding: 0.75rem 1rem;
+    background: #e1bee7;
     cursor: pointer;
     user-select: none;
     transition: background 0.2s ease;
 }
 
-.moderator-analysis-header:hover {
-    background: #dee2e6;
+.moderator-init-header:hover {
+    background: #ce93d8;
 }
 
-.moderator-analysis-title {
-    font-size: 0.95rem;
-    color: #495057;
+.moderator-init-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #4a148c;
 }
 
-.moderator-analysis-title strong {
-    color: #212529;
-}
-
-.toggle-icon {
+.moderator-init-toggle {
     font-size: 0.75rem;
-    color: #6c757d;
-    transition: transform 0.3s ease;
+    color: #7b1fa2;
 }
 
-.moderator-analysis-content {
+.moderator-init-content {
     padding: 1rem;
     background: #ffffff;
 }
 
-.analysis-section {
-    font-size: 0.9rem;
-    line-height: 1.6;
+.moderator-field {
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+    color: #495057;
 }
 
-.analysis-field {
-    margin-bottom: 0.75rem;
-}
-
-.analysis-field:last-child {
+.moderator-field:last-child {
     margin-bottom: 0;
 }
 
-.analysis-field strong {
-    color: #495057;
-    font-weight: 600;
+.moderator-field strong {
+    color: #4a148c;
 }
 
-.analysis-field ul {
-    margin: 0.5rem 0 0 1.5rem;
+/* ========================================
+   Moderator Synthesis Card (embedded in round cards)
+   ======================================== */
+
+.moderator-synthesis-card {
+    margin-top: 1rem;
+    background: #fff3e0;
+    border-left: 4px solid #ff9800;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.moderator-synthesis-header {
+    padding: 0.5rem 1rem;
+    background: #ffe0b2;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #e65100;
+}
+
+.moderator-synthesis-content {
+    padding: 0.75rem 1rem;
+    background: #ffffff;
+}
+
+.synthesis-field {
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+    color: #495057;
+}
+
+.synthesis-field:last-child {
+    margin-bottom: 0;
+}
+
+.synthesis-field strong {
+    color: #e65100;
+}
+
+.synthesis-issues {
+    margin: 0.5rem 0;
+}
+
+.synthesis-issues .valid-issues {
+    background: #c8e6c9;
+    border-left: 3px solid #4caf50;
+    padding: 0.5rem;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.synthesis-issues .valid-issues em {
+    color: #2e7d32;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.synthesis-issues .invalid-issues {
+    background: #ffcdd2;
+    border-left: 3px solid #f44336;
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+.synthesis-issues .invalid-issues em {
+    color: #c62828;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.synthesis-issues ul {
+    margin: 0.5rem 0 0 1rem;
     padding: 0;
 }
 
-.analysis-field li {
+.synthesis-issues li {
+    font-size: 0.8rem;
+    color: #555;
     margin: 0.25rem 0;
-    color: #6c757d;
-}
-
-.valid-issues {
-    margin: 0.5rem 0;
-    padding: 0.5rem;
-    background: #d4edda;
-    border-left: 3px solid #28a745;
-    border-radius: 4px;
-}
-
-.valid-issues em {
-    color: #155724;
-    font-weight: 600;
-}
-
-.valid-issues ul {
-    margin-top: 0.5rem;
-}
-
-.valid-issues li {
-    color: #155724;
-}
-
-.invalid-issues {
-    margin: 0.5rem 0;
-    padding: 0.5rem;
-    background: #fff3cd;
-    border-left: 3px solid #ffc107;
-    border-radius: 4px;
-}
-
-.invalid-issues em {
-    color: #856404;
-    font-weight: 600;
-}
-
-.invalid-issues ul {
-    margin-top: 0.5rem;
-}
-
-.invalid-issues li {
-    color: #856404;
 }
 
 /* Badge Styles */
@@ -1606,4 +1628,11 @@ body {
     font-size: 0.8rem;
     color: #6c757d;
     font-style: italic;
+}
+
+/* Moderator Status Container */
+.moderator-status-container {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    min-height: 40px;
 }

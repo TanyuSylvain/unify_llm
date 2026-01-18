@@ -20,8 +20,31 @@ class ModeratorAnalysisViewer {
      * @param {Object} analysis - Initial analysis data
      */
     showInitAnalysis(analysis) {
+        console.log('[Viewer] showInitAnalysis called');
+        console.log('[Viewer] container exists:', !!this.container);
+        console.log('[Viewer] container parent:', this.container?.parentElement?.tagName);
+        console.log('[Viewer] container innerHTML before:', this.container.innerHTML.substring(0, 100));
+
         const card = this.createAnalysisCard('init', analysis, true);
-        this.container.appendChild(card);
+        console.log('[Viewer] Card created, checking...');
+
+        try {
+            this.container.appendChild(card);
+            console.log('[Viewer] appendChild succeeded');
+        } catch (e) {
+            console.error('[Viewer] appendChild failed:', e);
+        }
+
+        console.log('[Viewer] container innerHTML after:', this.container.innerHTML.substring(0, 200));
+        console.log('[Viewer] container children count:', this.container.children.length);
+
+        // Verify card is in DOM
+        const cardInDOM = document.getElementById(card.id);
+        console.log('[Viewer] Card found in DOM by ID:', !!cardInDOM);
+        if (cardInDOM) {
+            console.log('[Viewer] Card outerHTML:', cardInDOM.outerHTML.substring(0, 300));
+        }
+
         this.analysisCards.push(card);
     }
 
@@ -141,11 +164,14 @@ class ModeratorAnalysisViewer {
      * @returns {string} - HTML string
      */
     formatInitAnalysis(analysis) {
+        console.log('[Viewer] formatInitAnalysis called with:', analysis);
         const intent = analysis.intent || 'N/A';
-        const keyConstraints = analysis.key_constraints || [];
+        const keyConstraints = analysis.key_constraints || analysis.keyConstraints || [];
         const complexity = analysis.complexity || 'unknown';
-        const complexityReason = analysis.complexity_reason || 'N/A';
+        const complexityReason = analysis.complexity_reason || analysis.complexityReason || 'N/A';
         const decision = analysis.decision || 'unknown';
+
+        console.log('[Viewer] Parsed values:', { intent, keyConstraints, complexity, decision });
 
         const complexityBadge = this.getComplexityBadge(complexity);
         const decisionBadge = this.getDecisionBadge(decision);

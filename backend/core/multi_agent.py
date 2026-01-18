@@ -563,18 +563,21 @@ class MultiAgentDebateWorkflow:
 
             # Emit moderator init analysis
             if "moderator_init_analysis" in current_state:
+                analysis = current_state["moderator_init_analysis"]
                 yield {
                     "type": "moderator_init",
-                    "analysis": current_state["moderator_init_analysis"]
+                    "analysis": analysis
                 }
                 # Store analysis as message
                 if conversation_id:
+                    content_str = json.dumps(analysis, ensure_ascii=False)
+                    print(f"[Debug] Storing moderator_init: content type={type(content_str).__name__}, content_len={len(content_str)}")
                     await self.storage.add_message(
                         conversation_id=conversation_id,
                         role="system",
-                        content=json.dumps(current_state["moderator_init_analysis"], ensure_ascii=False),
+                        content=content_str,
                         message_type="moderator_init",
-                        metadata={"analysis": current_state["moderator_init_analysis"]}
+                        metadata={"analysis": analysis}
                     )
 
             # Check if direct answer
