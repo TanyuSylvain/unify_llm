@@ -8,6 +8,9 @@ from .mistral import MistralProvider
 from .qwen import QwenProvider
 from .glm import GLMProvider
 from .minimax import MiniMaxProvider
+from .deepseek import DeepSeekProvider
+from .openai import OpenAIProvider
+from .gemini import GeminiProvider
 
 
 class ProviderRegistry:
@@ -19,6 +22,9 @@ class ProviderRegistry:
         "qwen": QwenProvider,
         "glm": GLMProvider,
         "minimax": MiniMaxProvider,
+        "deepseek": DeepSeekProvider,
+        "openai": OpenAIProvider,
+        "gemini": GeminiProvider,
     }
 
     @classmethod

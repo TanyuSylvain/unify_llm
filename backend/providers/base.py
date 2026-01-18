@@ -53,12 +53,27 @@ class BaseLLMProvider(ABC):
         """Return the human-readable provider name."""
         pass
 
-    def supports_thinking(self) -> bool:
+    def supports_thinking(self, model_id: str = None) -> bool:
         """
-        Check if this provider/model supports thinking mode.
+        Check if a specific model supports thinking mode.
+
+        Args:
+            model_id: Model ID to check. If None, returns False.
 
         Returns:
-            True if thinking mode can be enabled/disabled, False otherwise
+            True if the model supports thinking mode, False otherwise
+        """
+        return False
+
+    def is_thinking_locked(self, model_id: str = None) -> bool:
+        """
+        Check if thinking mode is locked (cannot be toggled) for a model.
+
+        Args:
+            model_id: Model ID to check. If None, returns False.
+
+        Returns:
+            True if thinking is always on and cannot be disabled, False otherwise
         """
         return False
 

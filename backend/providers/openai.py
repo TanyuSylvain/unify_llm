@@ -1,5 +1,5 @@
 """
-Alibaba Qwen provider implementation.
+OpenAI GPT provider implementation.
 """
 
 from typing import List, Dict
@@ -7,52 +7,51 @@ from langchain_openai import ChatOpenAI
 from .base import BaseLLMProvider
 
 
-class QwenProvider(BaseLLMProvider):
-    """Alibaba Qwen provider using OpenAI-compatible API."""
+class OpenAIProvider(BaseLLMProvider):
+    """OpenAI GPT provider using OpenAI API."""
 
     def get_available_models(self) -> List[Dict[str, str]]:
-        """Return available Qwen models."""
+        """Return available OpenAI models."""
         return [
             {
-                "id": "qwen3-max",
-                "name": "Qwen3 Max",
-                "description": "Most capable Qwen model for complex reasoning",
-                "supports_thinking": False
-            },
-            {
-                "id": "qwen3-plus",
-                "name": "Qwen3 Plus",
-                "description": "Enhanced performance with good balance",
+                "id": "gpt-5.2",
+                "name": "gpt-5.2",
+                "description": "Most capable GPT-5 model",
                 "supports_thinking": False
             },
         ]
 
     def get_provider_name(self) -> str:
         """Return the provider name."""
-        return "Alibaba Qwen"
+        return "OpenAI"
 
     def supports_streaming(self) -> bool:
-        """Qwen supports streaming."""
+        """OpenAI supports streaming."""
         return True
+
+    def supports_thinking(self, model_id: str = None) -> bool:
+        """GPT-5.2 does not support thinking mode."""
+        _ = model_id  # Unused but required by interface
+        return False
 
     def initialize(self, model_id: str, api_key: str, temperature: float = 0.7, thinking: bool = False, **kwargs):
         """
-        Initialize Qwen LLM client.
+        Initialize OpenAI LLM client.
 
         Args:
-            model_id: Qwen model ID (e.g., 'qwen-max')
-            api_key: Qwen/DashScope API key
+            model_id: OpenAI model ID (e.g., 'gpt-5.2')
+            api_key: OpenAI API key
             temperature: Sampling temperature (default: 0.7)
-            thinking: Not supported for Qwen models
+            thinking: Not supported for this model
             **kwargs: Additional configuration (e.g., base_url)
 
         Returns:
-            ChatOpenAI instance configured for Qwen
+            ChatOpenAI instance configured for OpenAI
         """
         validated_key = self.validate_api_key(api_key)
         validated_model = self.validate_model_id(model_id)
 
-        base_url = kwargs.get("base_url", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+        base_url = kwargs.get("base_url", "https://api.openai.com/v1")
 
         # thinking parameter ignored - not supported
         _ = thinking

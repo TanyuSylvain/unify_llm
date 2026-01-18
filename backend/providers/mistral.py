@@ -16,17 +16,20 @@ class MistralProvider(BaseLLMProvider):
             {
                 "id": "mistral-large-latest",
                 "name": "Mistral Large",
-                "description": "Most capable Mistral model for complex tasks"
+                "description": "Most capable Mistral model for complex tasks",
+                "supports_thinking": False
             },
             {
                 "id": "mistral-medium-latest",
                 "name": "Mistral Medium",
-                "description": "Balanced performance and cost"
+                "description": "Balanced performance and cost",
+                "supports_thinking": False
             },
             {
                 "id": "mistral-small-latest",
                 "name": "Mistral Small",
-                "description": "Fast and efficient for simpler tasks"
+                "description": "Fast and efficient for simpler tasks",
+                "supports_thinking": False
             },
         ]
 
@@ -46,7 +49,7 @@ class MistralProvider(BaseLLMProvider):
             model_id: Mistral model ID (e.g., 'mistral-large-latest')
             api_key: Mistral API key
             temperature: Sampling temperature (default: 0.7)
-            thinking: Enable thinking mode (not supported, ignored)
+            thinking: Not supported for Mistral models
             **kwargs: Additional configuration (unused)
 
         Returns:
@@ -54,6 +57,9 @@ class MistralProvider(BaseLLMProvider):
         """
         validated_key = self.validate_api_key(api_key)
         validated_model = self.validate_model_id(model_id)
+
+        # thinking parameter ignored - not supported
+        _ = thinking
 
         return ChatMistralAI(
             model=validated_model,

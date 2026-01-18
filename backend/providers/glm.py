@@ -16,12 +16,14 @@ class GLMProvider(BaseLLMProvider):
             {
                 "id": "glm-4.7",
                 "name": "GLM 4.7",
-                "description": "Enhanced GLM-4 with improved capabilities"
+                "description": "Enhanced GLM-4 with improved capabilities",
+                "supports_thinking": True
             },
             {
                 "id": "glm-4.6",
                 "name": "GLM 4.6",
-                "description": "Balanced performance and efficiency"
+                "description": "Balanced performance and efficiency",
+                "supports_thinking": True
             },
         ]
 
@@ -33,8 +35,9 @@ class GLMProvider(BaseLLMProvider):
         """GLM supports streaming."""
         return True
 
-    def supports_thinking(self) -> bool:
+    def supports_thinking(self, model_id: str = None) -> bool:
         """GLM models support thinking mode."""
+        _ = model_id  # All GLM models support thinking
         return True
 
     def initialize(self, model_id: str, api_key: str, temperature: float = 0.7, thinking: bool = False, **kwargs):

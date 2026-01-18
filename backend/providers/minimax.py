@@ -16,7 +16,8 @@ class MiniMaxProvider(BaseLLMProvider):
             {
                 "id": "MiniMax-M2.1",
                 "name": "MiniMax-M2.1",
-                "description": "Latest generation model with superior performance"
+                "description": "Latest generation model with superior performance",
+                "supports_thinking": True
             },
         ]
 
@@ -28,8 +29,9 @@ class MiniMaxProvider(BaseLLMProvider):
         """MiniMax supports streaming."""
         return True
 
-    def supports_thinking(self) -> bool:
+    def supports_thinking(self, model_id: str = None) -> bool:
         """MiniMax-M2.1 supports thinking mode."""
+        _ = model_id  # All MiniMax models support thinking
         return True
 
     def initialize(self, model_id: str, api_key: str, temperature: float = 0.7, thinking: bool = False, **kwargs):

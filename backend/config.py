@@ -30,11 +30,17 @@ class Settings(BaseSettings):
     glm_api_key: Optional[str] = None
     zhipuai_api_key: Optional[str] = None
     minimax_api_key: Optional[str] = None
+    deepseek_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    gemini_api_key: Optional[str] = None
 
     # Provider Base URLs
     qwen_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     glm_base_url: str = "https://open.bigmodel.cn/api/paas/v4"
     minimax_base_url: str = "https://api.minimax.io/v1"
+    deepseek_base_url: str = "https://api.deepseek.com"
+    openai_base_url: str = "https://api.openai.com/v1"
+    gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
 
     # Storage Configuration
     storage_backend: str = "sqlite"  # Options: memory, sqlite, redis
@@ -59,7 +65,10 @@ class Settings(BaseSettings):
             "mistral": self.mistral_api_key,
             "qwen": self.qwen_api_key or self.dashscope_api_key,
             "glm": self.glm_api_key or self.zhipuai_api_key,
-            "minimax": self.minimax_api_key
+            "minimax": self.minimax_api_key,
+            "deepseek": self.deepseek_api_key,
+            "openai": self.openai_api_key,
+            "gemini": self.gemini_api_key
         }
         return key_map.get(provider)
 
@@ -68,7 +77,10 @@ class Settings(BaseSettings):
         url_map = {
             "qwen": self.qwen_base_url,
             "glm": self.glm_base_url,
-            "minimax": self.minimax_base_url
+            "minimax": self.minimax_base_url,
+            "deepseek": self.deepseek_base_url,
+            "openai": self.openai_base_url,
+            "gemini": self.gemini_base_url
         }
         return url_map.get(provider)
 
