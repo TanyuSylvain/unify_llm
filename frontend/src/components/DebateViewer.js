@@ -7,11 +7,10 @@
 export class DebateViewer {
     constructor(containerElement, moderatorInitElement = null) {
         this.container = containerElement;
-        this.moderatorInitElement = moderatorInitElement;
-        this.moderatorInitExpanded = true; // Moderator init starts expanded
+        this.moderatorInitElement = moderatorInitElement; // Keep for backwards compatibility
         this.moderatorInitAnalysis = null;
         this.iterations = [];
-        this.expandedCard = null; // Track which round card is currently expanded
+        this.expandedCard = null; // Track which card is expanded: 'init' or iteration index (0-based)
     }
 
     /**
@@ -28,16 +27,26 @@ export class DebateViewer {
         this.iterations = [];
         this.expandedCard = null;
         this.moderatorInitAnalysis = null;
-        this.moderatorInitExpanded = true;
-        this.renderModeratorInit();
+        // Hide the old moderator init container if it exists
+        if (this.moderatorInitElement) {
+            this.moderatorInitElement.style.display = 'none';
+            this.moderatorInitElement.innerHTML = '';
+        }
         this.render();
     }
 
     /**
-     * Render the debate viewer (just round cards, accordion style)
+     * Render the debate viewer (init card + round cards, accordion style)
      */
     render() {
-        if (this.iterations.length === 0) {
+        // Hide old moderator init container (we now render it in main container)
+        if (this.moderatorInitElement) {
+            this.moderatorInitElement.style.display = 'none';
+            this.moderatorInitElement.innerHTML = '';
+        }
+
+        // Show container if we have init analysis or iterations
+        if (!this.moderatorInitAnalysis && this.iterations.length === 0) {
             this.container.innerHTML = '';
             this.container.style.display = 'none';
             return;
@@ -47,25 +56,25 @@ export class DebateViewer {
         this.container.style.flexDirection = 'column';
         this.container.style.height = '100%';
 
-        this.container.innerHTML = this.renderIterations();
+        // Render init card (if exists) + iteration cards
+        let html = '';
+        if (this.moderatorInitAnalysis) {
+            html += this.renderInitCard();
+        }
+        html += this.renderIterations();
 
+        this.container.innerHTML = html;
         this.setupEventListeners();
     }
 
     /**
-     * Render moderator init analysis card
+     * Render moderator init card (same style as round cards, integrated in accordion)
      */
-    renderModeratorInit() {
-        if (!this.moderatorInitElement) return;
-
-        if (!this.moderatorInitAnalysis) {
-            this.moderatorInitElement.innerHTML = '';
-            this.moderatorInitElement.style.display = 'none';
-            return;
-        }
-
-        this.moderatorInitElement.style.display = 'block';
+    renderInitCard() {
         const analysis = this.moderatorInitAnalysis;
+        if (!analysis) return '';
+
+        const isExpanded = this.expandedCard === 'init';
         const intent = analysis.intent || 'N/A';
         const keyConstraints = analysis.key_constraints || analysis.keyConstraints || [];
         const complexity = analysis.complexity || 'unknown';
@@ -76,36 +85,49 @@ export class DebateViewer {
         const complexityBadge = this.getComplexityBadge(complexity);
         const decisionBadge = this.getDecisionBadge(decision);
 
-        // Format key constraints
+        // Format key constraints as list items
         const constraintsHtml = keyConstraints.length > 0
-            ? `<ul>${keyConstraints.map(c => `<li>${this.escapeHtml(c)}</li>`).join('')}</ul>`
-            : '<p>None identified</p>';
+            ? keyConstraints.map(c => `<li>${this.escapeHtml(c)}</li>`).join('')
+            : '';
 
-        this.moderatorInitElement.innerHTML = `
-            <div class="moderator-init-card ${this.moderatorInitExpanded ? 'expanded' : ''}" id="moderatorInitCard">
-                <div class="moderator-init-header" id="moderatorInitHeader">
-                    <span class="moderator-init-title">🤔 Moderator Initial Analysis</span>
-                    <span class="moderator-init-toggle">${this.moderatorInitExpanded ? '▲' : '▼'}</span>
+        return `
+            <div class="round-card ${isExpanded ? 'expanded' : ''}" data-iteration="init">
+                <div class="round-card-header" data-iteration="init">
+                    <span class="round-number">🤔 Initial Analysis</span>
+                    ${decisionBadge}
+                    <span class="round-toggle">${isExpanded ? '▲' : '▼'}</span>
                 </div>
-                ${this.moderatorInitExpanded ? `
-                <div class="moderator-init-content">
-                    <div class="moderator-field"><strong>Intent:</strong> ${this.escapeHtml(intent)}</div>
-                    <div class="moderator-field"><strong>Key Constraints:</strong> ${constraintsHtml}</div>
-                    <div class="moderator-field"><strong>Complexity:</strong> ${complexityBadge} ${this.escapeHtml(complexityReason)}</div>
-                    <div class="moderator-field"><strong>Decision:</strong> ${decisionBadge}</div>
+                ${isExpanded ? `
+                <div class="round-card-content">
+                    <div class="round-card-body">
+                        <div class="moderator-card">
+                            <div class="card-header">
+                                <span class="card-icon">🎯</span>
+                                <span class="card-title">Query Analysis</span>
+                                ${complexityBadge}
+                            </div>
+                            <div class="card-body">
+                                <div class="answer-section">
+                                    <strong>Intent:</strong>
+                                    <p>${this.escapeHtml(intent)}</p>
+                                </div>
+                                ${constraintsHtml ? `
+                                <div class="answer-section">
+                                    <strong>Key Constraints:</strong>
+                                    <ul class="constraints-list">${constraintsHtml}</ul>
+                                </div>
+                                ` : ''}
+                                <div class="answer-section">
+                                    <strong>Complexity:</strong>
+                                    <p>${this.escapeHtml(complexityReason)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 ` : ''}
             </div>
         `;
-
-        // Set up toggle event
-        const header = this.moderatorInitElement.querySelector('#moderatorInitHeader');
-        if (header) {
-            header.addEventListener('click', () => {
-                this.moderatorInitExpanded = !this.moderatorInitExpanded;
-                this.renderModeratorInit();
-            });
-        }
     }
 
     /**
@@ -162,8 +184,8 @@ export class DebateViewer {
                     <div class="round-card-body">
                         ${iteration.answer ? this.renderExpertAnswer(iteration.answer) : ''}
                         ${iteration.review ? this.renderCriticReview(iteration.review) : ''}
+                        ${synthesis ? this.renderModeratorSynthesis(synthesis, index + 1) : ''}
                     </div>
-                    ${synthesis ? this.renderModeratorSynthesis(synthesis, index + 1) : ''}
                     ${nextRound ? `<div class="next-round-indicator" data-next="${index + 2}">Next: ${nextRound} ▾</div>` : ''}
                 </div>
                 ` : ''}
@@ -173,7 +195,7 @@ export class DebateViewer {
     }
 
     /**
-     * Render moderator synthesis feedback for a round
+     * Render moderator synthesis feedback for a round (same style as expert/critic cards)
      */
     renderModeratorSynthesis(synthesis, roundNumber) {
         const decision = synthesis.decision || 'unknown';
@@ -187,34 +209,48 @@ export class DebateViewer {
         const validIssues = feedback.valid_issues || [];
         const invalidIssues = feedback.invalid_issues || [];
 
-        let issuesHtml = '';
-        if (validIssues.length > 0 || invalidIssues.length > 0) {
-            issuesHtml = '<div class="synthesis-issues">';
-            if (validIssues.length > 0) {
-                issuesHtml += '<div class="valid-issues"><em>Valid Issues:</em><ul>';
-                validIssues.forEach(issue => {
-                    issuesHtml += `<li>${this.escapeHtml(issue)}</li>`;
-                });
-                issuesHtml += '</ul></div>';
-            }
-            if (invalidIssues.length > 0) {
-                issuesHtml += '<div class="invalid-issues"><em>Invalid Criticisms:</em><ul>';
-                invalidIssues.forEach(issue => {
-                    issuesHtml += `<li>${this.escapeHtml(issue)}</li>`;
-                });
-                issuesHtml += '</ul></div>';
-            }
-            issuesHtml += '</div>';
+        let validIssuesHtml = '';
+        if (validIssues.length > 0) {
+            validIssuesHtml = `
+                <div class="answer-section">
+                    <strong>Valid Issues:</strong>
+                    <ul class="valid-issues-list">${validIssues.map(issue => `<li>${this.escapeHtml(issue)}</li>`).join('')}</ul>
+                </div>
+            `;
+        }
+
+        let invalidIssuesHtml = '';
+        if (invalidIssues.length > 0) {
+            invalidIssuesHtml = `
+                <div class="answer-section">
+                    <strong>Invalid Criticisms:</strong>
+                    <ul class="invalid-issues-list">${invalidIssues.map(issue => `<li>${this.escapeHtml(issue)}</li>`).join('')}</ul>
+                </div>
+            `;
         }
 
         return `
-            <div class="moderator-synthesis-card">
-                <div class="moderator-synthesis-header">⚖️ Moderator Feedback</div>
-                <div class="moderator-synthesis-content">
-                    <div class="synthesis-field"><strong>Decision:</strong> ${decisionBadge}</div>
-                    ${issuesHtml}
-                    ${guidance && decision === 'continue' ? `<div class="synthesis-field"><strong>Improvement:</strong> ${this.escapeHtml(guidance)}</div>` : ''}
-                    ${summary ? `<div class="synthesis-field"><strong>Summary:</strong> ${this.escapeHtml(summary)}</div>` : ''}
+            <div class="moderator-card">
+                <div class="card-header">
+                    <span class="card-icon">⚖️</span>
+                    <span class="card-title">Moderator Synthesis</span>
+                    ${decisionBadge}
+                </div>
+                <div class="card-body">
+                    ${validIssuesHtml}
+                    ${invalidIssuesHtml}
+                    ${guidance && decision === 'continue' ? `
+                    <div class="answer-section">
+                        <strong>Improvement Guidance:</strong>
+                        <p>${this.escapeHtml(guidance)}</p>
+                    </div>
+                    ` : ''}
+                    ${summary ? `
+                    <div class="answer-section">
+                        <strong>Summary:</strong>
+                        <p>${this.escapeHtml(summary)}</p>
+                    </div>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -344,8 +380,10 @@ export class DebateViewer {
         cardHeaders.forEach(header => {
             header.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const iteration = parseInt(header.dataset.iteration) - 1;
-                this.toggleCard(iteration);
+                const iterationStr = header.dataset.iteration;
+                // Handle 'init' card separately from numbered iterations
+                const cardId = iterationStr === 'init' ? 'init' : parseInt(iterationStr) - 1;
+                this.toggleCard(cardId);
             });
         });
 
@@ -420,8 +458,9 @@ export class DebateViewer {
      */
     setModeratorInit(analysis) {
         this.moderatorInitAnalysis = analysis;
-        this.moderatorInitExpanded = true;
-        this.renderModeratorInit();
+        // Auto-expand the init card when it's set
+        this.expandedCard = 'init';
+        this.render();
     }
 
     /**

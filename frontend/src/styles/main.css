@@ -1144,12 +1144,20 @@ body {
     color: #721c24;
 }
 
-/* Expert Card */
+/* Expert Card, Critic Card, Moderator Card */
 .expert-card,
-.critic-card {
+.critic-card,
+.moderator-card {
     border: 1px solid #e9ecef;
     border-radius: 0.4rem;
     overflow: hidden;
+    margin-bottom: 0.75rem;
+}
+
+.expert-card:last-child,
+.critic-card:last-child,
+.moderator-card:last-child {
+    margin-bottom: 0;
 }
 
 .expert-card {
@@ -1158,6 +1166,10 @@ body {
 
 .critic-card {
     border-left: 3px solid #ffc107;
+}
+
+.moderator-card {
+    border-left: 3px solid #9c27b0;
 }
 
 .card-header {
@@ -1271,6 +1283,59 @@ body {
     position: absolute;
     left: 0;
     color: #ffc107;
+}
+
+/* Constraints list (for moderator init) */
+.constraints-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.constraints-list li {
+    font-size: 0.85rem;
+    padding: 0.25rem 0;
+    padding-left: 1rem;
+    position: relative;
+}
+
+.constraints-list li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: #9c27b0;
+}
+
+/* Valid/Invalid issues lists (for moderator synthesis) */
+.valid-issues-list,
+.invalid-issues-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.valid-issues-list li,
+.invalid-issues-list li {
+    font-size: 0.85rem;
+    padding: 0.25rem 0;
+    padding-left: 1rem;
+    position: relative;
+}
+
+.valid-issues-list li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: #28a745;
+    font-weight: bold;
+}
+
+.invalid-issues-list li::before {
+    content: "✗";
+    position: absolute;
+    left: 0;
+    color: #dc3545;
+    font-weight: bold;
 }
 
 /* Collapsible Details */
@@ -1438,152 +1503,11 @@ body {
 }
 
 /* ========================================
-   Moderator Init Card (in debate panel)
+   Moderator Init Container (kept for backwards compatibility, hidden)
    ======================================== */
 
 .moderator-init-container {
-    width: 100%;
-    padding: 0.5rem;
     display: none;
-}
-
-.moderator-init-card {
-    background: #f3e5f5;
-    border-left: 4px solid #9c27b0;
-    border-radius: 6px;
-    overflow: hidden;
-    transition: all 0.3s ease;
-}
-
-.moderator-init-card.expanded {
-    border-left-color: #7b1fa2;
-    box-shadow: 0 2px 8px rgba(156, 39, 176, 0.2);
-}
-
-.moderator-init-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem 1rem;
-    background: #e1bee7;
-    cursor: pointer;
-    user-select: none;
-    transition: background 0.2s ease;
-}
-
-.moderator-init-header:hover {
-    background: #ce93d8;
-}
-
-.moderator-init-title {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #4a148c;
-}
-
-.moderator-init-toggle {
-    font-size: 0.75rem;
-    color: #7b1fa2;
-}
-
-.moderator-init-content {
-    padding: 1rem;
-    background: #ffffff;
-}
-
-.moderator-field {
-    margin-bottom: 0.5rem;
-    font-size: 0.85rem;
-    color: #495057;
-}
-
-.moderator-field:last-child {
-    margin-bottom: 0;
-}
-
-.moderator-field strong {
-    color: #4a148c;
-}
-
-/* ========================================
-   Moderator Synthesis Card (embedded in round cards)
-   ======================================== */
-
-.moderator-synthesis-card {
-    margin-top: 1rem;
-    background: #fff3e0;
-    border-left: 4px solid #ff9800;
-    border-radius: 6px;
-    overflow: hidden;
-}
-
-.moderator-synthesis-header {
-    padding: 0.5rem 1rem;
-    background: #ffe0b2;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #e65100;
-}
-
-.moderator-synthesis-content {
-    padding: 0.75rem 1rem;
-    background: #ffffff;
-}
-
-.synthesis-field {
-    margin-bottom: 0.5rem;
-    font-size: 0.85rem;
-    color: #495057;
-}
-
-.synthesis-field:last-child {
-    margin-bottom: 0;
-}
-
-.synthesis-field strong {
-    color: #e65100;
-}
-
-.synthesis-issues {
-    margin: 0.5rem 0;
-}
-
-.synthesis-issues .valid-issues {
-    background: #c8e6c9;
-    border-left: 3px solid #4caf50;
-    padding: 0.5rem;
-    border-radius: 4px;
-    margin-bottom: 0.5rem;
-}
-
-.synthesis-issues .valid-issues em {
-    color: #2e7d32;
-    font-weight: 600;
-    font-size: 0.8rem;
-}
-
-.synthesis-issues .invalid-issues {
-    background: #ffcdd2;
-    border-left: 3px solid #f44336;
-    padding: 0.5rem;
-    border-radius: 4px;
-}
-
-.synthesis-issues .invalid-issues em {
-    color: #c62828;
-    font-weight: 600;
-    font-size: 0.8rem;
-}
-
-.synthesis-issues ul {
-    margin: 0.5rem 0 0 1rem;
-    padding: 0;
-}
-
-.synthesis-issues li {
-    font-size: 0.8rem;
-    color: #555;
-    margin: 0.25rem 0;
 }
 
 /* Badge Styles */

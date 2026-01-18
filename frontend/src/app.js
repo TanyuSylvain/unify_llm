@@ -584,10 +584,10 @@ export class ChatApp {
                             this.progressIndicator.complete(terminationReason);
                         }
 
-                        // Collapse moderator init and hide status
+                        // Collapse all cards when debate ends
                         if (this.debateViewer) {
-                            this.debateViewer.moderatorInitExpanded = false;
-                            this.debateViewer.renderModeratorInit();
+                            this.debateViewer.expandedCard = null;
+                            this.debateViewer.render();
                         }
                         if (this.moderatorStatusIndicator) {
                             this.moderatorStatusIndicator.hide();
