@@ -91,10 +91,20 @@ export class ChatApp {
 
         // Conversation state
         this.conversationId = this.loadOrCreateConversationId();
+        this.messageComponent.setConversationId(this.conversationId);
+        if (this.debateViewer) {
+            this.debateViewer.setConversationId(this.conversationId);
+        }
         this.isProcessing = false;
         this.isThinkingEnabled = false;
         this.isMarkdownEnabled = true;
         this.isMultiAgentMode = false;
+
+        // Debate panel visibility state
+        this.debatePanelVisible = false;
+        this.debatePanelToggleOn = true; // Toggle button state (on = will show panel when debate starts)
+        this.currentDebateId = null;
+        this.currentDebateIteration = 0;
 
         // Initialize the app
         this.initialize();
@@ -135,6 +145,11 @@ export class ChatApp {
 
             // Load conversation history if exists
             await this.loadConversationHistory();
+
+            // Set initial chat container width based on mode and debate panel state
+            if (!this.isMultiAgentMode || !this.debatePanelToggleOn) {
+                this.hideDebatePanel();
+            }
 
             // Focus input
             this.messageInput.focus();
@@ -225,6 +240,27 @@ export class ChatApp {
 
         // Initialize agent status
         this.agentStatusElement = document.getElementById('agentStatus');
+
+        // Setup resize handles
+        try {
+            this.setupResizeHandles();
+        } catch (error) {
+            console.error('Error setting up resize handles:', error);
+        }
+
+        // Setup debate panel toggle
+        try {
+            this.setupDebatePanelToggle();
+        } catch (error) {
+            console.error('Error setting up debate panel toggle:', error);
+        }
+
+        // Setup click-to-expand for debate messages
+        try {
+            this.setupDebateMessageClickHandler();
+        } catch (error) {
+            console.error('Error setting up debate message click handler:', error);
+        }
     }
 
     /**
@@ -312,6 +348,257 @@ export class ChatApp {
     }
 
     /**
+     * Setup resize handles for sidebar and panel divider
+     */
+    setupResizeHandles() {
+        // Sidebar resize handle
+        const sidebarHandle = document.getElementById('sidebarResizeHandle');
+        const sidebar = document.getElementById('sidebar');
+
+        if (sidebarHandle && sidebar) {
+            // Load saved sidebar width
+            const savedWidth = getStorage('sidebarWidth');
+            if (savedWidth) {
+                sidebar.style.setProperty('--sidebar-width', savedWidth + 'px');
+            }
+
+            let isResizing = false;
+            let startX = 0;
+            let startWidth = 0;
+
+            sidebarHandle.addEventListener('mousedown', (e) => {
+                if (sidebar.classList.contains('collapsed')) return;
+                isResizing = true;
+                startX = e.clientX;
+                startWidth = sidebar.offsetWidth;
+                sidebarHandle.classList.add('active');
+                sidebar.classList.add('resizing');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const diff = e.clientX - startX;
+                const newWidth = Math.min(Math.max(startWidth + diff, 150), 400);
+                sidebar.style.setProperty('--sidebar-width', newWidth + 'px');
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (!isResizing) return;
+                isResizing = false;
+                sidebarHandle.classList.remove('active');
+                sidebar.classList.remove('resizing');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                // Save width
+                const width = sidebar.offsetWidth;
+                setStorage('sidebarWidth', width);
+            });
+        }
+
+        // Panel divider resize handle
+        const panelDivider = document.getElementById('panelDivider');
+        const chatContainer = document.querySelector('.chat-container');
+        const debatePanel = document.getElementById('debatePanel');
+        const mainPanel = document.querySelector('.main-panel');
+
+        if (panelDivider && chatContainer && debatePanel && mainPanel) {
+            // Load saved panel ratio
+            const savedRatio = getStorage('panelRatio');
+            if (savedRatio) {
+                const ratio = parseFloat(savedRatio);
+                mainPanel.style.setProperty('--chat-flex', ratio);
+                mainPanel.style.setProperty('--debate-flex', 1 - ratio);
+            }
+
+            let isResizing = false;
+            let startX = 0;
+
+            panelDivider.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                startX = e.clientX;
+                panelDivider.classList.add('active');
+                chatContainer.classList.add('resizing');
+                debatePanel.classList.add('resizing');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const mainRect = mainPanel.getBoundingClientRect();
+                const relativeX = e.clientX - mainRect.left;
+                const totalWidth = mainRect.width;
+                // Calculate ratio (accounting for gap and padding)
+                let ratio = relativeX / totalWidth;
+                ratio = Math.min(Math.max(ratio, 0.2), 0.8); // Limit between 20% and 80%
+                mainPanel.style.setProperty('--chat-flex', ratio);
+                mainPanel.style.setProperty('--debate-flex', 1 - ratio);
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (!isResizing) return;
+                isResizing = false;
+                panelDivider.classList.remove('active');
+                chatContainer.classList.remove('resizing');
+                debatePanel.classList.remove('resizing');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                // Save ratio
+                const chatFlex = getComputedStyle(mainPanel).getPropertyValue('--chat-flex');
+                if (chatFlex) {
+                    setStorage('panelRatio', chatFlex);
+                }
+            });
+        }
+    }
+
+    /**
+     * Setup debate panel toggle switch
+     */
+    setupDebatePanelToggle() {
+        const toggleContainer = document.getElementById('debateToggleContainer');
+        const toggleCheckbox = document.getElementById('debatePanelToggle');
+        const debatePanel = document.getElementById('debatePanel');
+        const panelDivider = document.getElementById('panelDivider');
+
+        if (!toggleCheckbox || !debatePanel) {
+            console.log('Debate toggle elements not found, skipping setup');
+            return;
+        }
+
+        // Load saved toggle state
+        try {
+            const savedToggleOn = getStorage('debatePanelToggleOn');
+            if (savedToggleOn !== null && savedToggleOn !== undefined) {
+                this.debatePanelToggleOn = savedToggleOn === true;
+            }
+        } catch (e) {
+            console.error('Error loading debate toggle state:', e);
+        }
+
+        // Set initial checkbox state
+        toggleCheckbox.checked = this.debatePanelToggleOn;
+
+        toggleCheckbox.addEventListener('change', () => {
+            this.debatePanelToggleOn = toggleCheckbox.checked;
+            setStorage('debatePanelToggleOn', this.debatePanelToggleOn);
+
+            if (this.debatePanelToggleOn) {
+                this.showDebatePanel();
+            } else {
+                this.hideDebatePanel();
+            }
+        });
+    }
+
+    /**
+     * Show debate panel and divider
+     */
+    showDebatePanel() {
+        const debatePanel = document.getElementById('debatePanel');
+        const panelDivider = document.getElementById('panelDivider');
+        const chatContainer = document.querySelector('.chat-container');
+
+        if (debatePanel) {
+            debatePanel.style.display = 'flex';
+            this.debatePanelVisible = true;
+        }
+        if (panelDivider) {
+            panelDivider.classList.add('visible');
+        }
+        if (chatContainer) {
+            chatContainer.classList.remove('full-width');
+        }
+    }
+
+    /**
+     * Hide debate panel and divider
+     */
+    hideDebatePanel() {
+        const debatePanel = document.getElementById('debatePanel');
+        const panelDivider = document.getElementById('panelDivider');
+        const chatContainer = document.querySelector('.chat-container');
+
+        if (debatePanel) {
+            debatePanel.style.display = 'none';
+            this.debatePanelVisible = false;
+        }
+        if (panelDivider) {
+            panelDivider.classList.remove('visible');
+        }
+        if (chatContainer) {
+            chatContainer.classList.add('full-width');
+        }
+    }
+
+    /**
+     * Update debate toggle visibility based on mode
+     */
+    updateDebateToggleVisibility() {
+        const toggleContainer = document.getElementById('debateToggleContainer');
+        const toggleCheckbox = document.getElementById('debatePanelToggle');
+
+        if (!toggleContainer) return;
+
+        if (this.isMultiAgentMode) {
+            toggleContainer.style.display = 'flex';
+            // Sync checkbox state
+            if (toggleCheckbox) {
+                toggleCheckbox.checked = this.debatePanelToggleOn;
+            }
+        } else {
+            toggleContainer.style.display = 'none';
+        }
+    }
+
+    /**
+     * Setup click handler for debate-generated messages
+     */
+    setupDebateMessageClickHandler() {
+        if (!this.messagesContainer) return;
+
+        this.messagesContainer.addEventListener('click', (e) => {
+            const debateMsg = e.target.closest('.message.debate-answer');
+            if (!debateMsg) return;
+
+            const debateId = debateMsg.dataset.debateId;
+            const iteration = parseInt(debateMsg.dataset.iteration) || 0;
+
+            // If toggle is on but panel is hidden, show it
+            if (this.debatePanelToggleOn && !this.debatePanelVisible) {
+                this.showDebatePanel();
+            }
+
+            // If panel is visible, load and show the corresponding debate
+            if (this.debatePanelVisible && this.debateViewer) {
+                // Load the specific debate data for this message
+                if (debateId && debateId !== this.debateViewer.currentDebateId) {
+                    this.debateViewer.loadData(debateId);
+                }
+
+                // Expand the corresponding round
+                const cardIndex = iteration > 0 ? iteration - 1 : this.debateViewer.iterations.length - 1;
+                if (cardIndex >= 0) {
+                    this.debateViewer.expandedCard = cardIndex;
+                    this.debateViewer.render();
+
+                    // Scroll to the expanded card
+                    setTimeout(() => {
+                        const card = this.debateViewerElement.querySelector(`.round-card[data-iteration="${cardIndex + 1}"]`);
+                        if (card) {
+                            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }, 100);
+                }
+            }
+        });
+    }
+
+    /**
      * Update visibility of multi-agent UI components
      */
     updateMultiAgentUIVisibility() {
@@ -332,6 +619,30 @@ export class ChatApp {
         }
         if (thinkingContainer) {
             thinkingContainer.style.display = this.isMultiAgentMode ? 'none' : 'flex';
+        }
+
+        // Update debate toggle button visibility
+        try {
+            this.updateDebateToggleVisibility();
+        } catch (error) {
+            console.error('Error updating debate toggle visibility:', error);
+        }
+
+        // Auto-hide debate panel and status bars when switching to simple mode
+        if (!this.isMultiAgentMode) {
+            try {
+                this.hideDebatePanel();
+            } catch (error) {
+                console.error('Error hiding debate panel:', error);
+            }
+
+            // Hide agent status bar
+            this.hideAgentStatus();
+
+            // Hide moderator status indicator
+            if (this.moderatorStatusIndicator) {
+                this.moderatorStatusIndicator.hide();
+            }
         }
     }
 
@@ -385,7 +696,15 @@ export class ChatApp {
             // Load the full history if conversation exists
             const history = await this.apiClient.getConversationHistory(this.conversationId);
             if (history && history.messages && history.messages.length > 0) {
-                this.messageComponent.loadMessages(history.messages);
+                this.messageComponent.loadMessages(history.messages, this.isMarkdownEnabled);
+            }
+
+            // Load most recent debate data from localStorage if available
+            if (this.debateViewer) {
+                const hasDebateData = this.debateViewer.loadMostRecentData();
+                if (hasDebateData && this.isMultiAgentMode && this.debatePanelToggleOn) {
+                    this.showDebatePanel();
+                }
             }
         } catch (error) {
             // Something went wrong, but we can still continue
@@ -483,15 +802,19 @@ export class ChatApp {
         this.messageInput.value = '';
         this.setProcessing(true);
 
-        // Show debate panel
-        const debatePanel = document.getElementById('debatePanel');
-        if (debatePanel) {
-            debatePanel.style.display = 'flex';
+        // Generate debate ID for this session
+        this.currentDebateId = Date.now().toString();
+        this.currentDebateIteration = 0;
+
+        // Show debate panel if toggle is on
+        if (this.debatePanelToggleOn) {
+            this.showDebatePanel();
         }
 
-        // Clear previous debate data
+        // Clear previous debate display and set new debate ID
         if (this.debateViewer) {
-            this.debateViewer.clear();
+            this.debateViewer.clear(false); // Don't clear storage, just display
+            this.debateViewer.setDebateId(this.currentDebateId);
         }
 
         // Start progress indicator
@@ -560,14 +883,20 @@ export class ChatApp {
                     },
                     onIterationComplete: (iteration, status, score, summary) => {
                         console.log(`Iteration ${iteration} complete: ${status}, score: ${score}`);
+                        this.currentDebateIteration = iteration;
                     },
                     onDone: (finalAnswer, wasDirectAnswer, terminationReason, totalIterations) => {
                         console.log('Debate complete:', { finalAnswer, wasDirectAnswer, terminationReason, totalIterations });
 
-                        // Update final answer in message
-                        this.messageComponent.updateMessage(
-                            typingIndicator,
+                        // Remove typing indicator
+                        this.messageComponent.removeTypingIndicator(typingIndicator);
+
+                        // Add debate answer message with source badge
+                        const iteration = wasDirectAnswer ? 0 : (totalIterations || this.currentDebateIteration);
+                        this.messageComponent.addDebateMessage(
                             finalAnswer,
+                            this.currentDebateId,
+                            iteration,
                             this.isMarkdownEnabled
                         );
 
@@ -688,6 +1017,37 @@ export class ChatApp {
             }
         } catch (error) {
             console.error('[ModeSwitch] Error switching mode:', error);
+
+            // If conversation not found, create a new one and retry
+            if (error.message && error.message.includes('not found')) {
+                console.log('[ModeSwitch] Conversation not found, creating new conversation...');
+                await this.createNewConversation();
+
+                // Retry mode switch with new conversation
+                try {
+                    const debateConfig = this.isMultiAgentMode && this.multiAgentConfig ?
+                        this.multiAgentConfig.getConfig() : null;
+
+                    const response = await this.apiClient.switchMode(
+                        this.conversationId,
+                        targetMode,
+                        debateConfig
+                    );
+
+                    if (response.success) {
+                        console.log(`✓ Mode switched successfully after creating new conversation`);
+                        if (this.messageComponent.addSystemMessage) {
+                            this.messageComponent.addSystemMessage(
+                                `Switched to ${targetMode} mode. ${response.message || ''}`
+                            );
+                        }
+                        return;
+                    }
+                } catch (retryError) {
+                    console.error('[ModeSwitch] Retry failed:', retryError);
+                }
+            }
+
             if (this.messageComponent.addErrorMessage) {
                 this.messageComponent.addErrorMessage(`Error switching mode: ${error.message}`);
             } else {
@@ -706,6 +1066,12 @@ export class ChatApp {
         if (conversationId === this.conversationId) return;
 
         this.conversationId = conversationId;
+        this.messageComponent.setConversationId(conversationId);
+        if (this.debateViewer) {
+            this.debateViewer.setConversationId(conversationId);
+            // Clear without removing storage (we'll load from storage)
+            this.debateViewer.clear(false);
+        }
         setStorage('conversationId', conversationId);
         this.sidebar.setCurrentConversation(conversationId);
 
@@ -721,6 +1087,11 @@ export class ChatApp {
      */
     createNewConversation() {
         this.conversationId = generateUUID();
+        this.messageComponent.setConversationId(this.conversationId);
+        if (this.debateViewer) {
+            this.debateViewer.setConversationId(this.conversationId);
+            this.debateViewer.clear();
+        }
         setStorage('conversationId', this.conversationId);
         this.sidebar.setCurrentConversation(this.conversationId);
         this.messageComponent.clearMessages();

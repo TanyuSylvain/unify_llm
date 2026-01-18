@@ -18,6 +18,9 @@
         <!-- Sidebar (content managed by Sidebar.js) -->
         <aside class="sidebar" id="sidebar"></aside>
 
+        <!-- Sidebar Resize Handle -->
+        <div class="resize-handle vertical" id="sidebarResizeHandle"></div>
+
         <!-- Main Content -->
         <main class="main-content">
             <!-- Header -->
@@ -55,6 +58,15 @@
                         </label>
                         <span class="toggle-label">Markdown</span>
                     </div>
+
+                    <!-- Debate Panel Toggle (only visible in debate mode) -->
+                    <div class="debate-toggle" id="debateToggleContainer" style="display: none;">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="debatePanelToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label">Debate Detail</span>
+                    </div>
                 </div>
             </div>
 
@@ -83,6 +95,9 @@
                         <button id="sendBtn">Send</button>
                     </div>
                 </div>
+
+                <!-- Panel Divider (between conversation and debate) -->
+                <div class="resize-handle vertical panel-divider" id="panelDivider"></div>
 
                 <!-- Debate Process Container (Right Side) -->
                 <div id="debatePanel" class="debate-container" style="display: none;">

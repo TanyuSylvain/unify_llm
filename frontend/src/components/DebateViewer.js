@@ -4,6 +4,8 @@
  * and moderator analysis
  */
 
+import { getStorage, setStorage } from '../utils/helpers.js';
+
 export class DebateViewer {
     constructor(containerElement, moderatorInitElement = null) {
         this.container = containerElement;
@@ -11,6 +13,119 @@ export class DebateViewer {
         this.moderatorInitAnalysis = null;
         this.iterations = [];
         this.expandedCard = null; // Track which card is expanded: 'init' or iteration index (0-based)
+        this.conversationId = null;
+        this.currentDebateId = null; // Track current debate session
+    }
+
+    /**
+     * Set conversation ID for data persistence
+     * @param {string} conversationId - The conversation ID
+     */
+    setConversationId(conversationId) {
+        this.conversationId = conversationId;
+    }
+
+    /**
+     * Set current debate ID
+     * @param {string} debateId - The debate ID
+     */
+    setDebateId(debateId) {
+        this.currentDebateId = debateId;
+    }
+
+    /**
+     * Get storage key for all debates in this conversation
+     * @returns {string} Storage key
+     */
+    getStorageKey() {
+        return `debateData_${this.conversationId}`;
+    }
+
+    /**
+     * Save current debate data to localStorage (keyed by debateId)
+     */
+    saveData() {
+        if (!this.conversationId || !this.currentDebateId) return;
+
+        const allDebates = getStorage(this.getStorageKey(), {});
+        allDebates[this.currentDebateId] = {
+            moderatorInitAnalysis: this.moderatorInitAnalysis,
+            iterations: this.iterations,
+            expandedCard: this.expandedCard
+        };
+        setStorage(this.getStorageKey(), allDebates);
+    }
+
+    /**
+     * Load debate data for a specific debateId from localStorage
+     * @param {string} debateId - Optional debateId to load (defaults to currentDebateId)
+     * @returns {boolean} Whether data was loaded
+     */
+    loadData(debateId = null) {
+        if (!this.conversationId) return false;
+
+        const targetDebateId = debateId || this.currentDebateId;
+        if (!targetDebateId) return false;
+
+        const allDebates = getStorage(this.getStorageKey(), {});
+        const data = allDebates[targetDebateId];
+
+        if (data) {
+            this.currentDebateId = targetDebateId;
+            this.moderatorInitAnalysis = data.moderatorInitAnalysis || null;
+            this.iterations = data.iterations || [];
+            this.expandedCard = data.expandedCard !== undefined ? data.expandedCard : null;
+            this.render();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Load the most recent debate data (for initial load)
+     * @returns {boolean} Whether data was loaded
+     */
+    loadMostRecentData() {
+        if (!this.conversationId) return false;
+
+        const allDebates = getStorage(this.getStorageKey(), {});
+        const debateIds = Object.keys(allDebates);
+
+        if (debateIds.length > 0) {
+            // Load the most recent (last) debate
+            const lastDebateId = debateIds[debateIds.length - 1];
+            return this.loadData(lastDebateId);
+        }
+        return false;
+    }
+
+    /**
+     * Check if there's any debate data for this conversation
+     * @returns {boolean} Whether any debate data exists
+     */
+    hasAnyData() {
+        if (!this.conversationId) return false;
+        const allDebates = getStorage(this.getStorageKey(), {});
+        return Object.keys(allDebates).length > 0;
+    }
+
+    /**
+     * Clear stored data for current conversation
+     */
+    clearStoredData() {
+        if (!this.conversationId) return;
+        localStorage.removeItem(this.getStorageKey());
+    }
+
+    /**
+     * Clear stored data for a specific debateId
+     * @param {string} debateId - The debate ID to clear
+     */
+    clearDebateData(debateId) {
+        if (!this.conversationId || !debateId) return;
+        const allDebates = getStorage(this.getStorageKey(), {});
+        delete allDebates[debateId];
+        setStorage(this.getStorageKey(), allDebates);
     }
 
     /**
@@ -22,8 +137,9 @@ export class DebateViewer {
 
     /**
      * Clear all data
+     * @param {boolean} clearStorage - Whether to also clear stored data (default: true)
      */
-    clear() {
+    clear(clearStorage = true) {
         this.iterations = [];
         this.expandedCard = null;
         this.moderatorInitAnalysis = null;
@@ -31,6 +147,9 @@ export class DebateViewer {
         if (this.moderatorInitElement) {
             this.moderatorInitElement.style.display = 'none';
             this.moderatorInitElement.innerHTML = '';
+        }
+        if (clearStorage) {
+            this.clearStoredData();
         }
         this.render();
     }
@@ -436,6 +555,7 @@ export class DebateViewer {
 
         // Auto-expand the new card
         this.expandedCard = iteration - 1;
+        this.saveData();
         this.render();
     }
 
@@ -449,6 +569,7 @@ export class DebateViewer {
             this.iterations.push({});
         }
         this.iterations[iteration - 1].review = review;
+        this.saveData();
         this.render();
     }
 
@@ -460,6 +581,7 @@ export class DebateViewer {
         this.moderatorInitAnalysis = analysis;
         // Auto-expand the init card when it's set
         this.expandedCard = 'init';
+        this.saveData();
         this.render();
     }
 
@@ -473,6 +595,7 @@ export class DebateViewer {
             this.iterations.push({});
         }
         this.iterations[iteration - 1].synthesis = synthesis;
+        this.saveData();
         this.render();
     }
 

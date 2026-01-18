@@ -79,22 +79,59 @@ body {
 
 /* Sidebar */
 .sidebar {
-    width: 220px;
-    min-width: 220px;
+    width: var(--sidebar-width, 220px);
+    min-width: 0;
     background: #1a1a2e;
     color: white;
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
     border-right: 1px solid #2a2a4e;
-    transition: width 0.3s ease, min-width 0.3s ease, margin 0.3s ease;
     overflow: hidden;
 }
 
 .sidebar.collapsed {
-    width: 0;
-    min-width: 0;
-    margin-left: -1px;
+    width: 0 !important;
+}
+
+.sidebar.resizing {
+    transition: none;
+}
+
+/* Resize Handles */
+.resize-handle {
+    flex-shrink: 0;
+    background: transparent;
+    z-index: 100;
+}
+
+.resize-handle.vertical {
+    width: 6px;
+    cursor: col-resize;
+    transition: background 0.2s ease;
+}
+
+.resize-handle.vertical:hover,
+.resize-handle.vertical.active {
+    background: #4a9eff;
+}
+
+/* Sidebar resize handle */
+#sidebarResizeHandle {
+    margin-left: -3px;
+}
+
+.sidebar.collapsed + #sidebarResizeHandle {
+    display: none;
+}
+
+/* Panel divider (between conversation and debate) */
+.panel-divider {
+    display: none;
+}
+
+.panel-divider.visible {
+    display: block;
 }
 
 .sidebar-header {
@@ -405,6 +442,12 @@ body {
     color: #aaa;
 }
 
+/* Debate Panel Toggle Button */
+.debate-toggle {
+    display: flex;
+    align-items: center;
+}
+
 /* Main Panel: Conversation + Debate side by side */
 .main-panel {
     flex: 1;
@@ -416,7 +459,7 @@ body {
 
 /* Chat Container */
 .chat-container {
-    flex: 1;
+    flex: var(--chat-flex, 1);
     width: 0;
     display: flex;
     flex-direction: column;
@@ -425,6 +468,18 @@ body {
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     min-height: 0;
     overflow: hidden;
+}
+
+.chat-container.resizing,
+.debate-container.resizing {
+    user-select: none;
+    pointer-events: none;
+}
+
+/* Full-width chat container when debate panel is hidden */
+.chat-container.full-width {
+    flex: 1;
+    width: 100%;
 }
 
 /* Agent Status (shown during multi-agent debate) */
@@ -470,7 +525,7 @@ body {
 
 /* Debate Container (Right Side, equal width with chat) */
 .debate-container {
-    flex: 1;
+    flex: var(--debate-flex, 1);
     width: 0;
     background: white;
     border-radius: 0.5rem;
@@ -642,6 +697,32 @@ body {
     font-style: italic;
     border-left: 3px solid #2196f3;
     padding-left: 12px;
+}
+
+/* Debate-generated Answer Message */
+.message.debate-answer {
+    position: relative;
+    cursor: pointer;
+    transition: box-shadow 0.2s ease;
+}
+
+.message.debate-answer:hover {
+    box-shadow: 0 0 0 2px #667eea;
+}
+
+.message-source-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 0.25rem;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.message-content {
+    /* Container for the actual message content */
 }
 
 /* Markdown Styling in Messages */
