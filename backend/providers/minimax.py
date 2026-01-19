@@ -17,7 +17,8 @@ class MiniMaxProvider(BaseLLMProvider):
                 "id": "MiniMax-M2.1",
                 "name": "MiniMax-M2.1",
                 "description": "Latest generation model with superior performance",
-                "supports_thinking": True
+                "supports_thinking": True,
+                "thinking_locked": True
             },
         ]
 

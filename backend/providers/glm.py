@@ -17,13 +17,15 @@ class GLMProvider(BaseLLMProvider):
                 "id": "glm-4.7",
                 "name": "GLM 4.7",
                 "description": "Enhanced GLM-4 with improved capabilities",
-                "supports_thinking": True
+                "supports_thinking": True,
+                "thinking_locked": False
             },
             {
                 "id": "glm-4.6",
                 "name": "GLM 4.6",
                 "description": "Balanced performance and efficiency",
-                "supports_thinking": True
+                "supports_thinking": True,
+                "thinking_locked": False
             },
         ]
 
@@ -60,11 +62,10 @@ class GLMProvider(BaseLLMProvider):
         base_url = kwargs.get("base_url", "https://open.bigmodel.cn/api/paas/v4")
 
         # Build extra_body for thinking mode
+        # By default the thinking is enabled, GLM-4.6 will decide if thinking is necessary
         extra_body = {}
-        if thinking:
-            extra_body["thinking_type"] = "enable"
-        else:
-            extra_body["thinking_type"] = "disable"
+        if not thinking:
+            extra_body["thinking"] = {'type': 'disabled'}
 
         return ChatOpenAI(
             model=validated_model,
