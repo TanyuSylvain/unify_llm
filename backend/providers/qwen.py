@@ -20,10 +20,34 @@ class QwenProvider(BaseLLMProvider):
                 "supports_thinking": False
             },
             {
-                "id": "qwen3-plus",
-                "name": "Qwen3 Plus",
+                "id": "qwen3-235b-a22b-thinking-2507",
+                "name": "Qwen3 235b thinking",
+                "description": "Enhanced performance with good balance",
+                "supports_thinking": True
+            },
+            {
+                "id": "qwen3-235b-a22b-instruct-2507",
+                "name": "Qwen3 235b instruct",
                 "description": "Enhanced performance with good balance",
                 "supports_thinking": False
+            },
+            {
+                "id": "qwen3-coder-plus",
+                "name": "Qwen3 coder plus",
+                "description": "Qwen3 coder model",
+                "supports_thinking": False
+            },
+            {
+                "id": "deepseek-v3.2",
+                "name": "DeepSeek V3.2",
+                "description": "DeepSeek V3.2",
+                "supports_thinking": True
+            },
+            {
+                "id": "glm-4.7",
+                "name": "GLM 4.7",
+                "description": "GLM 4.7",
+                "supports_thinking": True
             },
         ]
 

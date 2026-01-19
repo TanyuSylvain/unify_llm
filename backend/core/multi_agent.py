@@ -23,6 +23,7 @@ from backend.core.multi_agent_state import MultiAgentState, create_initial_state
 from backend.core.prompts import (
     MODERATOR_INIT_PROMPT,
     MODERATOR_SYNTHESIZE_PROMPT,
+    MODERATOR_FINAL_SYNTHESIS_PROMPT,
     EXPERT_GENERATE_PROMPT,
     EXPERT_IMPROVEMENT_SECTION,
     EXPERT_FIRST_ITERATION_GUIDANCE,
@@ -330,38 +331,57 @@ class MultiAgentDebateWorkflow:
         # Prepare previous summary
         previous_summary = state.get("previous_summary", "这是第一轮迭代，无历史记录。")
 
-        prompt = MODERATOR_SYNTHESIZE_PROMPT.format(
-            original_question=state["original_question"],
-            iteration=state["iteration"],
-            max_iterations=self.max_iterations,
-            previous_summary=previous_summary,
-            current_answer=json.dumps(state["current_answer"], ensure_ascii=False, indent=2),
-            current_review=json.dumps(state["current_review"], ensure_ascii=False, indent=2),
-            score_threshold=self.score_threshold
-        )
-
-        response = self.moderator_llm.invoke([{"role": "user", "content": prompt}])
-        result = extract_json_from_response(response.content)
-
-        # Check termination conditions
+        # Pre-check termination conditions BEFORE LLM call
         review = state.get("current_review", {})
         score = review.get("overall_score", 0)
         passed = review.get("passed", False)
         iteration = state["iteration"]
 
-        # Determine if we should end
-        should_end = False
-        termination_reason = None
+        # Determine if termination will be forced by rules
+        forced_termination = False
+        forced_reason = None
+        termination_reason_display = None
 
         if passed or score >= self.score_threshold:
-            should_end = True
-            termination_reason = "score_threshold" if score >= self.score_threshold else "explicit_pass"
+            forced_termination = True
+            forced_reason = "score_threshold" if score >= self.score_threshold else "explicit_pass"
+            termination_reason_display = f"评审通过，评分 {score} 达到阈值 {self.score_threshold}"
         elif iteration >= self.max_iterations:
-            should_end = True
-            termination_reason = "max_iterations"
-        elif result.get("decision") == "end":
-            should_end = True
-            termination_reason = result.get("termination_reason", "moderator_decision")
+            forced_termination = True
+            forced_reason = "max_iterations"
+            termination_reason_display = f"已达到最大迭代次数 ({iteration}/{self.max_iterations})"
+
+        # Choose prompt based on whether termination is forced
+        if forced_termination:
+            # Use dedicated final synthesis prompt to ensure proper final_answer generation
+            prompt = MODERATOR_FINAL_SYNTHESIS_PROMPT.format(
+                original_question=state["original_question"],
+                iteration=iteration,
+                max_iterations=self.max_iterations,
+                previous_summary=previous_summary,
+                current_answer=json.dumps(state["current_answer"], ensure_ascii=False, indent=2),
+                current_review=json.dumps(state["current_review"], ensure_ascii=False, indent=2),
+                termination_reason=forced_reason,
+                termination_reason_display=termination_reason_display
+            )
+        else:
+            # Use standard prompt that allows LLM to decide
+            prompt = MODERATOR_SYNTHESIZE_PROMPT.format(
+                original_question=state["original_question"],
+                iteration=iteration,
+                max_iterations=self.max_iterations,
+                previous_summary=previous_summary,
+                current_answer=json.dumps(state["current_answer"], ensure_ascii=False, indent=2),
+                current_review=json.dumps(state["current_review"], ensure_ascii=False, indent=2),
+                score_threshold=self.score_threshold
+            )
+
+        response = self.moderator_llm.invoke([{"role": "user", "content": prompt}])
+        result = extract_json_from_response(response.content)
+
+        # Determine final termination status
+        should_end = forced_termination or result.get("decision") == "end"
+        termination_reason = forced_reason or result.get("termination_reason", "moderator_decision")
 
         if should_end:
             # Generate final answer
