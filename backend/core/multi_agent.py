@@ -551,6 +551,8 @@ class MultiAgentDebateWorkflow:
             if is_new_conversation:
                 title = question[:50] + "..." if len(question) > 50 else question
                 await self.storage.update_conversation_title(conversation_id, title)
+                # Set mode to debate for new conversations in multi-agent workflow
+                await self.storage.update_conversation_metadata(conversation_id, {"mode": "debate"})
 
         # Load previous debate state if exists
         debate_state = None

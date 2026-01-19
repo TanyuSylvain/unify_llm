@@ -41,10 +41,18 @@ class ConversationModeManager:
         Returns:
             Dict with success status and message
         """
-        # Verify conversation exists
+        # Get conversation if it exists
         conversation = await self.storage.get_conversation(conversation_id)
         if not conversation:
-            raise ValueError(f"Conversation {conversation_id} not found")
+            # Conversation not created yet - mode will be set when first message is sent
+            # Just return success, the frontend maintains the mode state
+            logger.info(f"Conversation {conversation_id} not found, mode switch deferred until first message")
+            return {
+                "success": True,
+                "conversation_id": conversation_id,
+                "mode": target_mode,
+                "message": f"Mode set to {target_mode} (will apply on first message)"
+            }
 
         current_mode = conversation.get("mode", "simple")
 

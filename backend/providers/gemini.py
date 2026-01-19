@@ -27,7 +27,7 @@ class GeminiProvider(BaseLLMProvider):
             },
             {
                 "id": "gemini-3-flash-preview",
-                "name": "gemini-3-flash-preview",
+                "name": "Gemini-3-flash-preview",
                 "description": "Advanced Gemini model with thinking",
                 "supports_thinking": True,
                 "thinking_locked": False  # Can toggle thinking

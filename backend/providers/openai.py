@@ -15,7 +15,7 @@ class OpenAIProvider(BaseLLMProvider):
         return [
             {
                 "id": "gpt-5.2",
-                "name": "gpt-5.2",
+                "name": "GPT-5.2",
                 "description": "Most capable GPT-5 model",
                 "supports_thinking": False
             },
