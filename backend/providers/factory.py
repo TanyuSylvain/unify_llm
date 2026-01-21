@@ -113,13 +113,15 @@ class ProviderFactory:
         for provider_id, models in all_models.items():
             provider = ProviderRegistry.get_provider(provider_id)
             for model in models:
+                model_id = model["id"]
                 result.append({
                     "provider": provider_id,
                     "provider_name": provider.get_provider_name(),
-                    "model_id": model["id"],
+                    "model_id": model_id,
                     "model_name": model["name"],
                     "description": model["description"],
-                    "supports_thinking": provider.supports_thinking()
+                    "supports_thinking": provider.supports_thinking(model_id),
+                    "thinking_locked": provider.is_thinking_locked(model_id)
                 })
 
         return result

@@ -11,26 +11,19 @@ class DeepSeekProvider(BaseLLMProvider):
     """DeepSeek provider using OpenAI-compatible API."""
 
     # Models that support thinking (always on, cannot be disabled)
-    THINKING_MODELS = ["deepseek-reasoner"]
 
     def get_available_models(self) -> List[Dict[str, str]]:
         """Return available DeepSeek models."""
         return [
             {
                 "id": "deepseek-chat",
-                "name": "DeepSeek Chat",
+                "name": "DeepSeek Chat (V3.2)",
                 "description": "DeepSeek's conversational model",
                 "supports_thinking": False
             },
             {
-                "id": "deepseek-coder",
-                "name": "DeepSeek Coder",
-                "description": "Specialized model for code generation and understanding",
-                "supports_thinking": False
-            },
-            {
                 "id": "deepseek-reasoner",
-                "name": "DeepSeek Reasoner",
+                "name": "DeepSeek Reasoner (V3.2)",
                 "description": "Advanced reasoning model with chain-of-thought",
                 "supports_thinking": True,
                 "thinking_locked": True  # Cannot disable thinking
@@ -44,14 +37,6 @@ class DeepSeekProvider(BaseLLMProvider):
     def supports_streaming(self) -> bool:
         """DeepSeek supports streaming."""
         return True
-
-    def supports_thinking(self, model_id: str = None) -> bool:
-        """Check if model supports thinking mode."""
-        return model_id in self.THINKING_MODELS
-
-    def is_thinking_locked(self, model_id: str = None) -> bool:
-        """DeepSeek Reasoner always thinks, cannot be disabled."""
-        return model_id in self.THINKING_MODELS
 
     def initialize(self, model_id: str, api_key: str, temperature: float = 0.7, thinking: bool = False, **kwargs):
         """

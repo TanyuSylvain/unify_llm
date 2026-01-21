@@ -37,11 +37,6 @@ class GLMProvider(BaseLLMProvider):
         """GLM supports streaming."""
         return True
 
-    def supports_thinking(self, model_id: str = None) -> bool:
-        """GLM models support thinking mode."""
-        _ = model_id  # All GLM models support thinking
-        return True
-
     def initialize(self, model_id: str, api_key: str, temperature: float = 0.7, thinking: bool = False, **kwargs):
         """
         Initialize GLM LLM client.

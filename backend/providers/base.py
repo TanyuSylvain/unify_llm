@@ -53,30 +53,6 @@ class BaseLLMProvider(ABC):
         """Return the human-readable provider name."""
         pass
 
-    def supports_thinking(self, model_id: str = None) -> bool:
-        """
-        Check if a specific model supports thinking mode.
-
-        Args:
-            model_id: Model ID to check. If None, returns False.
-
-        Returns:
-            True if the model supports thinking mode, False otherwise
-        """
-        return False
-
-    def is_thinking_locked(self, model_id: str = None) -> bool:
-        """
-        Check if thinking mode is locked (cannot be toggled) for a model.
-
-        Args:
-            model_id: Model ID to check. If None, returns False.
-
-        Returns:
-            True if thinking is always on and cannot be disabled, False otherwise
-        """
-        return False
-
     def validate_api_key(self, api_key: Optional[str]) -> str:
         """
         Validate and return API key, raising error if invalid.
@@ -114,3 +90,17 @@ class BaseLLMProvider(ABC):
                 f"Available models: {', '.join(available_model_ids)}"
             )
         return model_id
+    
+    def supports_thinking(self, model_id:str):
+        """Check if supports thinking""" 
+        for model in self.get_available_models():
+            if model.get('id') == model_id and model.get('support_thinking', False):
+                return True
+        return False
+    
+    def is_thinking_locked(self, model_id:str):
+        """Check is thinking locked"""
+        for model in self.get_available_models():
+            if model.get('id') == model_id and model.get('thinking_locked', False):
+                return True
+        return False

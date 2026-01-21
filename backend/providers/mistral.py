@@ -26,11 +26,20 @@ class MistralProvider(BaseLLMProvider):
                 "supports_thinking": False
             },
             {
-                "id": "mistral-small-latest",
-                "name": "Mistral Small",
-                "description": "Fast and efficient for simpler tasks",
-                "supports_thinking": False
+                "id": "magistral-medium-latest",
+                "name": "Magistral Medium",
+                "description": "Frontier-class multi-modal reasoning model",
+                "supports_thinking": True,
+                "thinking_locked": True,
             },
+            {
+                "id": "magistral-small-latest",
+                "name": "Magistral Small",
+                "description": "Small multi-modal reasoning model",
+                "supports_thinking": True,
+                "thinking_locked": True,
+            },
+
         ]
 
     def get_provider_name(self) -> str:

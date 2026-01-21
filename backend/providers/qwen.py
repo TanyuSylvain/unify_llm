@@ -14,16 +14,31 @@ class QwenProvider(BaseLLMProvider):
         """Return available Qwen models."""
         return [
             {
+                "id": "qwen3-max-preview",
+                "name": "Qwen3 Max Preview",
+                "description": "Most capable Qwen model for complex reasoning",
+                "supports_thinking": True,
+                "thinking_locked": False,
+            },
+            {
                 "id": "qwen3-max",
                 "name": "Qwen3 Max",
-                "description": "Most capable Qwen model for complex reasoning",
+                "description": "Most capable Qwen model",
                 "supports_thinking": False
+            },
+            {
+                "id": "qwen3-235b-a22b",
+                "name": "Qwen3 235b",
+                "description": "Enhanced performance with good balance with mixed thinking",
+                "supports_thinking": True,
+                "thinking_locked": False,
             },
             {
                 "id": "qwen3-235b-a22b-thinking-2507",
                 "name": "Qwen3 235b thinking",
                 "description": "Enhanced performance with good balance",
-                "supports_thinking": True
+                "supports_thinking": True,
+                "thinking_locked": True,
             },
             {
                 "id": "qwen3-235b-a22b-instruct-2507",
@@ -41,13 +56,22 @@ class QwenProvider(BaseLLMProvider):
                 "id": "deepseek-v3.2",
                 "name": "DeepSeek V3.2",
                 "description": "DeepSeek V3.2",
-                "supports_thinking": True
+                "supports_thinking": True,
+                "thinking_locked": False,
             },
             {
                 "id": "glm-4.7",
                 "name": "GLM 4.7",
                 "description": "GLM 4.7",
-                "supports_thinking": True
+                "supports_thinking": True,
+                "thinking_locked": False,
+            },
+            {
+                "id": "kimi-k2-thinking",
+                "name": "Kimi K2 Thinking",
+                "description": "Kimi K2 Thinking",
+                "supports_thinking": True,
+                "thinking_locked": True,
             },
         ]
 
@@ -78,13 +102,16 @@ class QwenProvider(BaseLLMProvider):
 
         base_url = kwargs.get("base_url", "https://dashscope.aliyuncs.com/compatible-mode/v1")
 
-        # thinking parameter ignored - not supported
-        _ = thinking
+        # thinking parameter
+        extra_body = {}
+        if thinking:
+            extra_body['enable_thinking'] = True
 
         return ChatOpenAI(
             model=validated_model,
             api_key=validated_key,
             base_url=base_url,
             temperature=temperature,
-            streaming=True
+            streaming=True,
+            extra_body=extra_body
         )

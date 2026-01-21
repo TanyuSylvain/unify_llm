@@ -10,11 +10,6 @@ from .base import BaseLLMProvider
 class GeminiProvider(BaseLLMProvider):
     """Google Gemini provider using OpenAI-compatible API."""
 
-    # Models that support thinking with thinkingLevel parameter
-    THINKING_MODELS = ["gemini-3-pro-preview", "gemini-3-flash-preview"]
-    # Models where thinking cannot be disabled
-    THINKING_LOCKED_MODELS = ["gemini-3-pro-preview"]
-
     def get_available_models(self) -> List[Dict[str, str]]:
         """Return available Gemini models."""
         return [
@@ -42,14 +37,6 @@ class GeminiProvider(BaseLLMProvider):
         """Gemini supports streaming."""
         return True
 
-    def supports_thinking(self, model_id: str = None) -> bool:
-        """Check if model supports thinking mode."""
-        return model_id in self.THINKING_MODELS
-
-    def is_thinking_locked(self, model_id: str = None) -> bool:
-        """Gemini 3 Pro cannot disable thinking."""
-        return model_id in self.THINKING_LOCKED_MODELS
-
     def initialize(self, model_id: str, api_key: str, temperature: float = 0.7, thinking: bool = False, **kwargs):
         """
         Initialize Gemini LLM client.
@@ -71,8 +58,11 @@ class GeminiProvider(BaseLLMProvider):
 
         # Build extra_body for thinking mode (Gemini 3 uses thinkingLevel)
         extra_body = {}
-        if validated_model in self.THINKING_MODELS:
-            if validated_model in self.THINKING_LOCKED_MODELS:
+
+        # Check if model supports thinking
+        if self.supports_thinking(validated_model):
+            # Check if thinking is locked (always on)
+            if self.is_thinking_locked(validated_model):
                 # Gemini 3 Pro: thinking always on, use high level
                 extra_body["thinkingLevel"] = "high"
             else:

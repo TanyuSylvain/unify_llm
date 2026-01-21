@@ -17,7 +17,7 @@ class OpenAIProvider(BaseLLMProvider):
                 "id": "gpt-5.2",
                 "name": "GPT-5.2",
                 "description": "Most capable GPT-5 model",
-                "supports_thinking": False
+                "support_thinking": False
             },
         ]
 
@@ -28,11 +28,6 @@ class OpenAIProvider(BaseLLMProvider):
     def supports_streaming(self) -> bool:
         """OpenAI supports streaming."""
         return True
-
-    def supports_thinking(self, model_id: str = None) -> bool:
-        """GPT-5.2 does not support thinking mode."""
-        _ = model_id  # Unused but required by interface
-        return False
 
     def initialize(self, model_id: str, api_key: str, temperature: float = 0.7, thinking: bool = False, **kwargs):
         """

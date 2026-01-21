@@ -653,16 +653,33 @@ export class ChatApp {
         const modelInfo = this.modelSelector.getSelectedModelInfo();
         console.log('Model info:', modelInfo);
         const supportsThinking = modelInfo && modelInfo.supports_thinking;
-        console.log('Supports thinking:', supportsThinking);
+        const thinkingLocked = modelInfo && modelInfo.thinking_locked;
+        console.log('Supports thinking:', supportsThinking, 'Thinking locked:', thinkingLocked);
 
-        this.thinkingToggle.disabled = !supportsThinking;
         const toggleContainer = this.thinkingToggle.closest('.thinking-toggle');
 
         if (supportsThinking) {
             toggleContainer.classList.remove('disabled');
+
+            if (thinkingLocked) {
+                // Thinking is always on and cannot be toggled
+                this.thinkingToggle.disabled = true;
+                this.thinkingToggle.checked = true;
+                this.isThinkingEnabled = true;
+                setStorage('thinkingEnabled', true);
+            } else {
+                // Thinking can be toggled - restore user preference
+                this.thinkingToggle.disabled = false;
+                const savedThinking = getStorage('thinkingEnabled');
+                if (savedThinking !== null) {
+                    this.isThinkingEnabled = savedThinking === 'true' || savedThinking === true;
+                    this.thinkingToggle.checked = this.isThinkingEnabled;
+                }
+            }
         } else {
+            // Model doesn't support thinking at all
             toggleContainer.classList.add('disabled');
-            // Reset thinking state when switching to unsupported model
+            this.thinkingToggle.disabled = true;
             this.isThinkingEnabled = false;
             this.thinkingToggle.checked = false;
         }
