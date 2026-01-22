@@ -26,6 +26,12 @@ class MistralProvider(BaseLLMProvider):
                 "supports_thinking": False
             },
             {
+                "id": "mistral-small-latest",
+                "name": "Mistral Small",
+                "description": "Low cost and performance",
+                "supports_thinking": False
+            },
+            {
                 "id": "magistral-medium-latest",
                 "name": "Magistral Medium",
                 "description": "Frontier-class multi-modal reasoning model",

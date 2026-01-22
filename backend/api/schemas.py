@@ -130,13 +130,30 @@ class MultiAgentModelConfig(BaseModel):
         }
 
 
+class ThinkingConfig(BaseModel):
+    """Thinking configuration for each role."""
+    moderator: bool = Field(default=False, description="Enable thinking for moderator")
+    expert: bool = Field(default=False, description="Enable thinking for expert")
+    critic: bool = Field(default=False, description="Enable thinking for critic")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "moderator": False,
+                "expert": True,
+                "critic": False
+            }
+        }
+
+
 class MultiAgentChatRequest(BaseModel):
     """Request model for multi-agent chat endpoints."""
     message: str = Field(..., description="User's message", min_length=1)
     conversation_id: Optional[str] = Field(None, description="Optional conversation ID")
     models: Optional[MultiAgentModelConfig] = Field(None, description="Per-role model configuration")
-    max_iterations: int = Field(default=3, ge=1, le=5, description="Maximum debate iterations")
+    max_iterations: int = Field(default=3, ge=1, le=10, description="Maximum debate iterations")
     score_threshold: float = Field(default=80.0, ge=0, le=100, description="Score threshold for passing")
+    thinking: Optional[ThinkingConfig] = Field(None, description="Thinking configuration for each role")
 
     class Config:
         json_schema_extra = {

@@ -14,7 +14,12 @@ export class MultiAgentConfig {
             expert: null,
             critic: null,
             maxIterations: 3,
-            scoreThreshold: 80
+            scoreThreshold: 80,
+            thinking: {
+                moderator: false,
+                expert: false,
+                critic: false
+            }
         };
         this.isExpanded = false;
         this.onChangeCallback = null;
@@ -76,28 +81,55 @@ export class MultiAgentConfig {
                         <h4>Role Models</h4>
                         <div class="role-selectors">
                             <div class="role-selector">
-                                <label for="moderator-model">
-                                    <span class="role-icon" title="Moderator: Assesses complexity, guides debate, synthesizes answer">M</span>
-                                    Moderator
-                                </label>
+                                <div class="role-header">
+                                    <label for="moderator-model">
+                                        <span class="role-icon" title="Moderator: Assesses complexity, guides debate, synthesizes answer">M</span>
+                                        Moderator
+                                    </label>
+                                    <div class="thinking-toggle" data-role="moderator">
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" data-thinking-role="moderator">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                        <span class="toggle-label">Thinking</span>
+                                    </div>
+                                </div>
                                 <select id="moderator-model" data-role="moderator">
                                     ${modelOptions}
                                 </select>
                             </div>
                             <div class="role-selector">
-                                <label for="expert-model">
-                                    <span class="role-icon" title="Expert: Generates professional answers">E</span>
-                                    Expert
-                                </label>
+                                <div class="role-header">
+                                    <label for="expert-model">
+                                        <span class="role-icon" title="Expert: Generates professional answers">E</span>
+                                        Expert
+                                    </label>
+                                    <div class="thinking-toggle" data-role="expert">
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" data-thinking-role="expert">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                        <span class="toggle-label">Thinking</span>
+                                    </div>
+                                </div>
                                 <select id="expert-model" data-role="expert">
                                     ${modelOptions}
                                 </select>
                             </div>
                             <div class="role-selector">
-                                <label for="critic-model">
-                                    <span class="role-icon" title="Critic: Reviews and provides feedback">C</span>
-                                    Critic
-                                </label>
+                                <div class="role-header">
+                                    <label for="critic-model">
+                                        <span class="role-icon" title="Critic: Reviews and provides feedback">C</span>
+                                        Critic
+                                    </label>
+                                    <div class="thinking-toggle" data-role="critic">
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" data-thinking-role="critic">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                        <span class="toggle-label">Thinking</span>
+                                    </div>
+                                </div>
                                 <select id="critic-model" data-role="critic">
                                     ${modelOptions}
                                 </select>
@@ -115,7 +147,7 @@ export class MultiAgentConfig {
                                 type="range"
                                 id="max-iterations"
                                 min="1"
-                                max="5"
+                                max="10"
                                 value="${this.config.maxIterations}"
                             />
                         </div>
@@ -142,6 +174,11 @@ export class MultiAgentConfig {
         this.setSelectValue('moderator-model', this.config.moderator);
         this.setSelectValue('expert-model', this.config.expert);
         this.setSelectValue('critic-model', this.config.critic);
+
+        // Update thinking toggle states based on selected models
+        this.updateThinkingToggleState('moderator');
+        this.updateThinkingToggleState('expert');
+        this.updateThinkingToggleState('critic');
     }
 
     /**
@@ -183,6 +220,60 @@ export class MultiAgentConfig {
     }
 
     /**
+     * Update thinking toggle state based on selected model capabilities
+     */
+    updateThinkingToggleState(role) {
+        const selectElement = this.container.querySelector(`select[data-role="${role}"]`);
+        const modelId = selectElement ? selectElement.value : null;
+        const modelInfo = modelId ? this.models.find(m => m.model_id === modelId) : null;
+
+        const toggleContainer = this.container.querySelector(`.thinking-toggle[data-role="${role}"]`);
+        const toggleInput = this.container.querySelector(`[data-thinking-role="${role}"]`);
+
+        if (!toggleContainer || !toggleInput) return;
+
+        if (!modelInfo) {
+            // No model selected
+            toggleContainer.classList.add('disabled');
+            toggleInput.disabled = true;
+            toggleInput.checked = false;
+            this.config.thinking[role] = false;
+            return;
+        }
+
+        const supportsThinking = modelInfo.supports_thinking || false;
+        const thinkingLocked = modelInfo.thinking_locked || false;
+
+        if (supportsThinking) {
+            toggleContainer.classList.remove('disabled');
+
+            if (thinkingLocked) {
+                // Always on, cannot toggle
+                toggleInput.disabled = true;
+                toggleInput.checked = true;
+                this.config.thinking[role] = true;
+            } else {
+                // Can toggle - check saved preference or default to true
+                toggleInput.disabled = false;
+                const savedKey = `thinking_${role}_${modelId}`;
+                const saved = localStorage.getItem(savedKey);
+                if (saved !== null) {
+                    this.config.thinking[role] = saved === 'true';
+                } else {
+                    this.config.thinking[role] = true; // Default ON for thinking models
+                }
+                toggleInput.checked = this.config.thinking[role];
+            }
+        } else {
+            // Model doesn't support thinking
+            toggleContainer.classList.add('disabled');
+            toggleInput.disabled = true;
+            toggleInput.checked = false;
+            this.config.thinking[role] = false;
+        }
+    }
+
+    /**
      * Render error state
      */
     renderError() {
@@ -208,11 +299,31 @@ export class MultiAgentConfig {
         }
 
         // Role model selectors
-        const roleSelects = this.container.querySelectorAll('[data-role]');
+        const roleSelects = this.container.querySelectorAll('select[data-role]');
         roleSelects.forEach(select => {
             select.addEventListener('change', (e) => {
                 const role = e.target.dataset.role;
                 this.config[role] = e.target.value;
+                this.updateThinkingToggleState(role); // Update thinking toggle state
+                this.saveConfig();
+                this.triggerChange();
+            });
+        });
+
+        // Thinking toggle events
+        const thinkingToggles = this.container.querySelectorAll('[data-thinking-role]');
+        thinkingToggles.forEach(toggle => {
+            toggle.addEventListener('change', (e) => {
+                const role = e.target.dataset.thinkingRole;
+                this.config.thinking[role] = e.target.checked;
+
+                // Save per-model preference
+                const modelSelect = this.container.querySelector(`select[data-role="${role}"]`);
+                const modelId = modelSelect ? modelSelect.value : null;
+                if (modelId) {
+                    localStorage.setItem(`thinking_${role}_${modelId}`, e.target.checked);
+                }
+
                 this.saveConfig();
                 this.triggerChange();
             });
@@ -262,7 +373,12 @@ export class MultiAgentConfig {
                 critic: this.config.critic || this.getDefaultModel()
             },
             maxIterations: this.config.maxIterations,
-            scoreThreshold: this.config.scoreThreshold
+            scoreThreshold: this.config.scoreThreshold,
+            thinking: {
+                moderator: this.config.thinking.moderator || false,
+                expert: this.config.thinking.expert || false,
+                critic: this.config.thinking.critic || false
+            }
         };
     }
 

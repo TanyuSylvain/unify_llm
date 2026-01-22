@@ -265,7 +265,12 @@ export class APIClient {
                 conversation_id: conversationId,
                 models: config.models,
                 max_iterations: config.maxIterations,
-                score_threshold: config.scoreThreshold
+                score_threshold: config.scoreThreshold,
+                thinking: config.thinking || {
+                    moderator: false,
+                    expert: false,
+                    critic: false
+                }
             };
 
             const response = await fetch(`${this.baseURL}/chat/multi-agent/stream`, {
@@ -400,7 +405,12 @@ export class APIClient {
                 conversation_id: conversationId,
                 models: config.models,
                 max_iterations: config.maxIterations,
-                score_threshold: config.scoreThreshold
+                score_threshold: config.scoreThreshold,
+                thinking: config.thinking || {
+                    moderator: false,
+                    expert: false,
+                    critic: false
+                }
             };
 
             const response = await fetch(`${this.baseURL}/chat/multi-agent/`, {

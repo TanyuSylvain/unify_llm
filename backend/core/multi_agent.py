@@ -97,7 +97,10 @@ class MultiAgentDebateWorkflow:
         storage: Optional[ConversationStorage] = None,
         max_iterations: int = 3,
         score_threshold: float = 80.0,
-        temperature: float = None
+        temperature: float = None,
+        thinking_moderator: bool = False,
+        thinking_expert: bool = False,
+        thinking_critic: bool = False
     ):
         """
         Initialize the multi-agent debate workflow.
@@ -107,9 +110,12 @@ class MultiAgentDebateWorkflow:
             expert_model: Model ID for the expert role
             critic_model: Model ID for the critic role
             storage: Storage backend (defaults to MemoryStorage)
-            max_iterations: Maximum debate iterations (1-5)
+            max_iterations: Maximum debate iterations (1-10)
             score_threshold: Score threshold for passing (0-100)
             temperature: LLM temperature (defaults to config)
+            thinking_moderator: Enable thinking for moderator
+            thinking_expert: Enable thinking for expert
+            thinking_critic: Enable thinking for critic
         """
         self.moderator_model = moderator_model
         self.expert_model = expert_model
@@ -117,18 +123,21 @@ class MultiAgentDebateWorkflow:
         self.max_iterations = max_iterations
         self.score_threshold = score_threshold
 
-        # Initialize LLMs for each role
+        # Initialize LLMs for each role with thinking parameters
         self.moderator_llm = ProviderFactory.create_llm(
             model_id=moderator_model,
-            temperature=temperature
+            temperature=temperature,
+            thinking=thinking_moderator
         )
         self.expert_llm = ProviderFactory.create_llm(
             model_id=expert_model,
-            temperature=temperature
+            temperature=temperature,
+            thinking=thinking_expert
         )
         self.critic_llm = ProviderFactory.create_llm(
             model_id=critic_model,
-            temperature=temperature
+            temperature=temperature,
+            thinking=thinking_critic
         )
 
         # Initialize storage

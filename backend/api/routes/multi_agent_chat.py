@@ -13,7 +13,8 @@ from fastapi.responses import StreamingResponse
 from backend.api.schemas import (
     MultiAgentChatRequest,
     MultiAgentChatResponse,
-    MultiAgentModelConfig
+    MultiAgentModelConfig,
+    ThinkingConfig
 )
 from backend.core.multi_agent import MultiAgentDebateWorkflow
 from backend.storage import get_storage
@@ -36,7 +37,10 @@ def get_workflow(
     expert_model: str,
     critic_model: str,
     max_iterations: int = 3,
-    score_threshold: float = 80.0
+    score_threshold: float = 80.0,
+    thinking_moderator: bool = False,
+    thinking_expert: bool = False,
+    thinking_critic: bool = False
 ) -> MultiAgentDebateWorkflow:
     """
     Get or create a workflow instance for the specified model combination.
@@ -47,14 +51,22 @@ def get_workflow(
         critic_model: Model ID for critic role
         max_iterations: Maximum debate iterations
         score_threshold: Score threshold for passing
+        thinking_moderator: Enable thinking for moderator
+        thinking_expert: Enable thinking for expert
+        thinking_critic: Enable thinking for critic
 
     Returns:
         MultiAgentDebateWorkflow instance
     """
     global _workflows, _storage
 
-    # Key includes all configuration
-    workflow_key = f"{moderator_model}:{expert_model}:{critic_model}:{max_iterations}:{score_threshold}"
+    # Key includes all configuration including thinking parameters
+    workflow_key = (
+        f"{moderator_model}:{thinking_moderator}:"
+        f"{expert_model}:{thinking_expert}:"
+        f"{critic_model}:{thinking_critic}:"
+        f"{max_iterations}:{score_threshold}"
+    )
 
     if workflow_key not in _workflows:
         _workflows[workflow_key] = MultiAgentDebateWorkflow(
@@ -63,7 +75,10 @@ def get_workflow(
             critic_model=critic_model,
             storage=_storage,
             max_iterations=max_iterations,
-            score_threshold=score_threshold
+            score_threshold=score_threshold,
+            thinking_moderator=thinking_moderator,
+            thinking_expert=thinking_expert,
+            thinking_critic=thinking_critic
         )
 
     return _workflows[workflow_key]
@@ -115,13 +130,19 @@ async def multi_agent_chat(request: MultiAgentChatRequest):
         # Resolve models
         moderator_model, expert_model, critic_model = resolve_models(request.models)
 
+        # Extract thinking configuration
+        thinking = request.thinking or ThinkingConfig()
+
         # Get or create workflow
         workflow = get_workflow(
             moderator_model=moderator_model,
             expert_model=expert_model,
             critic_model=critic_model,
             max_iterations=request.max_iterations,
-            score_threshold=request.score_threshold
+            score_threshold=request.score_threshold,
+            thinking_moderator=thinking.moderator,
+            thinking_expert=thinking.expert,
+            thinking_critic=thinking.critic
         )
 
         conversation_id = request.conversation_id or str(uuid.uuid4())
@@ -172,6 +193,9 @@ async def multi_agent_chat_stream(request: MultiAgentChatRequest):
     moderator_model, expert_model, critic_model = resolve_models(request.models)
     conversation_id = request.conversation_id or str(uuid.uuid4())
 
+    # Extract thinking configuration
+    thinking = request.thinking or ThinkingConfig()
+
     async def generate():
         """Generate SSE stream of debate events."""
         try:
@@ -180,7 +204,10 @@ async def multi_agent_chat_stream(request: MultiAgentChatRequest):
                 expert_model=expert_model,
                 critic_model=critic_model,
                 max_iterations=request.max_iterations,
-                score_threshold=request.score_threshold
+                score_threshold=request.score_threshold,
+                thinking_moderator=thinking.moderator,
+                thinking_expert=thinking.expert,
+                thinking_critic=thinking.critic
             )
 
             async for event in workflow.stream(request.message, conversation_id):
