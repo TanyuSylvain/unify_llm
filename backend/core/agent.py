@@ -18,6 +18,34 @@ class AgentState(TypedDict):
 class LangGraphAgent:
     """LangGraph agent with multi-provider support and pluggable storage."""
 
+    @staticmethod
+    def _extract_text_content(content) -> str:
+        """
+        Extract text from content which can be either a string or list of blocks.
+
+        Args:
+            content: Either a string or list of content blocks (for thinking models)
+
+        Returns:
+            str: Extracted text content
+        """
+        if isinstance(content, str):
+            return content
+        elif isinstance(content, list):
+            # Content is a list of blocks (common for thinking/reasoning models)
+            text_parts = []
+            for block in content:
+                if isinstance(block, dict):
+                    # Extract text from various possible formats
+                    if 'text' in block:
+                        text_parts.append(block['text'])
+                    elif 'content' in block:
+                        text_parts.append(block['content'])
+                elif isinstance(block, str):
+                    text_parts.append(block)
+            return ''.join(text_parts)
+        return ""
+
     def __init__(
         self,
         model_id: str,
@@ -120,8 +148,11 @@ class LangGraphAgent:
                 if hasattr(chunk, 'content'):
                     content = chunk.content
                     if content:
-                        full_response += content
-                        yield content
+                        # Extract text from content (handles both string and list formats)
+                        text_content = self._extract_text_content(content)
+                        if text_content:
+                            full_response += text_content
+                            yield text_content
         finally:
             # ALWAYS save the response, even if streaming was interrupted
             if conversation_id and full_response:
@@ -173,7 +204,8 @@ class LangGraphAgent:
         initial_state = {"messages": messages}
 
         result = self.graph.invoke(initial_state)
-        response = result["messages"][-1].content
+        raw_content = result["messages"][-1].content
+        response = self._extract_text_content(raw_content)
 
         # Add assistant response to storage
         if conversation_id:

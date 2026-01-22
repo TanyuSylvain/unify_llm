@@ -92,9 +92,9 @@ class BaseLLMProvider(ABC):
         return model_id
     
     def supports_thinking(self, model_id:str):
-        """Check if supports thinking""" 
+        """Check if supports thinking"""
         for model in self.get_available_models():
-            if model.get('id') == model_id and model.get('support_thinking', False):
+            if model.get('id') == model_id and model.get('supports_thinking', False):
                 return True
         return False
     

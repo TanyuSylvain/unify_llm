@@ -61,6 +61,34 @@ class MultiAgentDebateWorkflow:
     Uses sliding window approach for memory management.
     """
 
+    @staticmethod
+    def _extract_text_content(content) -> str:
+        """
+        Extract text from content which can be either a string or list of blocks.
+
+        Args:
+            content: Either a string or list of content blocks (for thinking models)
+
+        Returns:
+            str: Extracted text content
+        """
+        if isinstance(content, str):
+            return content
+        elif isinstance(content, list):
+            # Content is a list of blocks (common for thinking/reasoning models)
+            text_parts = []
+            for block in content:
+                if isinstance(block, dict):
+                    # Extract text from various possible formats
+                    if 'text' in block:
+                        text_parts.append(block['text'])
+                    elif 'content' in block:
+                        text_parts.append(block['content'])
+                elif isinstance(block, str):
+                    text_parts.append(block)
+            return ''.join(text_parts)
+        return ""
+
     def __init__(
         self,
         moderator_model: str,
@@ -180,7 +208,8 @@ class MultiAgentDebateWorkflow:
         )
 
         response = self.moderator_llm.invoke([{"role": "user", "content": prompt}])
-        result = extract_json_from_response(response.content)
+        text_content = self._extract_text_content(response.content)
+        result = extract_json_from_response(text_content)
 
         if "error" in result:
             # Fallback: treat as complex question
@@ -274,7 +303,8 @@ class MultiAgentDebateWorkflow:
         )
 
         response = self.expert_llm.invoke([{"role": "user", "content": prompt}])
-        result = extract_json_from_response(response.content)
+        text_content = self._extract_text_content(response.content)
+        result = extract_json_from_response(text_content)
 
         if "error" in result:
             # Fallback: create basic answer structure
@@ -282,7 +312,7 @@ class MultiAgentDebateWorkflow:
                 "version": state["iteration"],
                 "understanding": "问题理解",
                 "core_points": ["核心观点"],
-                "details": response.content,
+                "details": text_content,
                 "conclusion": "结论",
                 "confidence": 0.5,
                 "limitations": [],
@@ -305,7 +335,8 @@ class MultiAgentDebateWorkflow:
         )
 
         response = self.critic_llm.invoke([{"role": "user", "content": prompt}])
-        result = extract_json_from_response(response.content)
+        text_content = self._extract_text_content(response.content)
+        result = extract_json_from_response(text_content)
 
         if "error" in result:
             # Fallback: create basic review structure
@@ -377,7 +408,8 @@ class MultiAgentDebateWorkflow:
             )
 
         response = self.moderator_llm.invoke([{"role": "user", "content": prompt}])
-        result = extract_json_from_response(response.content)
+        text_content = self._extract_text_content(response.content)
+        result = extract_json_from_response(text_content)
 
         # Determine final termination status
         should_end = forced_termination or result.get("decision") == "end"

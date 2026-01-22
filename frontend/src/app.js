@@ -179,7 +179,7 @@ export class ChatApp {
         // Model change - update thinking toggle state
         this.modelSelector.onChange((modelId) => {
             setStorage('selectedModel', modelId);
-            this.updateThinkingToggleState();
+            this.updateThinkingToggleState(modelId);
         });
 
         // Mode selector change
@@ -192,7 +192,11 @@ export class ChatApp {
         // Thinking toggle change
         this.thinkingToggle.addEventListener('change', (e) => {
             this.isThinkingEnabled = e.target.checked;
-            setStorage('thinkingEnabled', this.isThinkingEnabled);
+            // Save preference per model
+            const modelId = this.modelSelector.getSelectedModel();
+            if (modelId) {
+                setStorage(`thinkingEnabled_${modelId}`, this.isThinkingEnabled);
+            }
         });
 
         // Markdown toggle change
@@ -221,13 +225,6 @@ export class ChatApp {
             this.modelSelector.setSelectedModel(savedModel);
         }
 
-        // Load saved thinking preference
-        const savedThinking = getStorage('thinkingEnabled');
-        if (savedThinking !== null) {
-            this.isThinkingEnabled = savedThinking === 'true' || savedThinking === true;
-            this.thinkingToggle.checked = this.isThinkingEnabled;
-        }
-
         // Load saved markdown preference
         const savedMarkdown = getStorage('markdownEnabled');
         if (savedMarkdown !== null) {
@@ -235,8 +232,9 @@ export class ChatApp {
             this.markdownToggle.checked = this.isMarkdownEnabled;
         }
 
-        // Initial update of thinking toggle state
-        this.updateThinkingToggleState();
+        // Initial update of thinking toggle state (will load per-model preference)
+        const currentModel = this.modelSelector.getSelectedModel();
+        this.updateThinkingToggleState(currentModel);
 
         // Initialize agent status
         this.agentStatusElement = document.getElementById('agentStatus');
@@ -648,8 +646,10 @@ export class ChatApp {
 
     /**
      * Update thinking toggle enabled/disabled state based on selected model
+     * @param {string} modelId - Optional model ID to check (uses current model if not provided)
      */
-    updateThinkingToggleState() {
+    updateThinkingToggleState(modelId = null) {
+        const currentModelId = modelId || this.modelSelector.getSelectedModel();
         const modelInfo = this.modelSelector.getSelectedModelInfo();
         console.log('Model info:', modelInfo);
         const supportsThinking = modelInfo && modelInfo.supports_thinking;
@@ -666,15 +666,22 @@ export class ChatApp {
                 this.thinkingToggle.disabled = true;
                 this.thinkingToggle.checked = true;
                 this.isThinkingEnabled = true;
-                setStorage('thinkingEnabled', true);
             } else {
-                // Thinking can be toggled - restore user preference
+                // Thinking can be toggled
                 this.thinkingToggle.disabled = false;
-                const savedThinking = getStorage('thinkingEnabled');
+
+                // Check if user has a saved preference for this specific model
+                const savedThinking = currentModelId ? getStorage(`thinkingEnabled_${currentModelId}`) : null;
+
                 if (savedThinking !== null) {
+                    // Restore user preference for this model
                     this.isThinkingEnabled = savedThinking === 'true' || savedThinking === true;
-                    this.thinkingToggle.checked = this.isThinkingEnabled;
+                } else {
+                    // No saved preference - default to enabled for thinking-capable models
+                    this.isThinkingEnabled = true;
                 }
+
+                this.thinkingToggle.checked = this.isThinkingEnabled;
             }
         } else {
             // Model doesn't support thinking at all
