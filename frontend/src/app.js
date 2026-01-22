@@ -168,12 +168,18 @@ export class ChatApp {
         // Send button click
         this.sendBtn.addEventListener('click', () => this.sendMessage());
 
-        // Enter key in input
-        this.messageInput.addEventListener('keypress', (e) => {
+        // Enter key in input (Shift+Enter for new line)
+        this.messageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 this.sendMessage();
             }
+        });
+
+        // Auto-resize textarea as user types
+        this.messageInput.addEventListener('input', () => {
+            this.messageInput.style.height = 'auto';
+            this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 150) + 'px';
         });
 
         // Model change - update thinking toggle state
@@ -765,6 +771,7 @@ export class ChatApp {
         // Update UI
         this.messageComponent.addUserMessage(message);
         this.messageInput.value = '';
+        this.messageInput.style.height = 'auto';
         this.setProcessing(true);
 
         // Show typing indicator
@@ -824,6 +831,7 @@ export class ChatApp {
         // Update UI
         this.messageComponent.addUserMessage(message);
         this.messageInput.value = '';
+        this.messageInput.style.height = 'auto';
         this.setProcessing(true);
 
         // Generate debate ID for this session

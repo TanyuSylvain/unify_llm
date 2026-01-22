@@ -1,4 +1,4 @@
-# UnifyLLM - Multi-Agent LLM Debate System
+# UnifyLLM - Multi-Agent LLM Studio System
 
 A powerful, cross-platform application for comparing and interacting with multiple Large Language Models through an intuitive debate interface. Built with LangGraph, FastAPI, and a clean web interface with streaming responses.
 
@@ -59,25 +59,26 @@ LangGraph-powered workflow with 3 specialized AI agents:
 
 UnifyLLM supports **7 major AI providers** with multiple models:
 
-| Provider | Models | Strengths |
+| Provider | Models | Description |
 |----------|--------|-----------|
-| **Mistral AI** | Mistral Large, Medium, Small | European AI, multilingual |
-| **Alibaba Qwen** | Qwen3 Max, Plus | Chinese/English bilingual |
-| **Zhipu GLM** | GLM 4.7, GLM 4.6 | Chinese market leader |
-| **MiniMax** | MiniMax-M2.1 | Conversational AI |
-| **DeepSeek** | DeepSeek Chat, Coder | Code-focused models |
-| **OpenAI-compatible** | GPT-4, GPT-3.5, etc. | Industry standard APIs |
-| **Google Gemini** | Gemini Pro, Flash | Multimodal capabilities |
+| **Mistral AI** | Mistral Large, Medium, Small, and Magistral Medium, Small | French AI, multilingual |
+| **Alibaba Qwen** | Qwen3 Max, Plus, 235b, DeepSeek V3.2, GLM-4.7, Kimi K2 | Qwen family cutting-edge models |
+| **Zhipu GLM** | GLM 4.7, GLM 4.6 | Zhipu latest general models |
+| **MiniMax** | MiniMax-M2.1 | I love it, top 1, suitable for deep search |
+| **DeepSeek** | DeepSeek Chat, Reasoner (V3.2) | Use it if you like |
+| **OpenAI-compatible** | GPT-5.2 | Still testing |
+| **Google Gemini** | Gemini 3 pro preview, flash | Still testing |
 
 ### 🎨 Core Features
 
 - **🔄 Real-time Streaming**: See responses as they're generated
-- **💭 Thinking Display**: Watch models "think" (GLM, MiniMax, DeepSeek)
+- **💭 Thinking Control**: Possible to enble or disable thinking
 - **💾 Conversation History**: Persistent storage with SQLite
 - **🎨 Markdown Rendering**: Beautiful formatting for code, tables, and text
+- **📋 Clean Copy**: One-click copy of purified content (removes redundant spaces, blank lines, and normalizes Chinese-English formatting)
 - **📱 Responsive UI**: Works on desktop, tablet, and mobile
 - **🔌 REST API**: Full programmatic access with OpenAPI docs
-- **🔐 Secure**: API keys stored locally in `.env` file
+- **🔐 Secure**: API keys stored locally in `.env` file, locally stored chat history
 - **⚡ Fast**: Optimized streaming and async processing
 
 ---
@@ -521,28 +522,3 @@ This project is licensed under the MIT License - see [LICENSE.txt](LICENSE.txt) 
 
 ---
 
-## 🙏 Acknowledgments
-
-Built with:
-- [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
-- [LangGraph](https://langchain-ai.github.io/langgraph/) - Multi-agent orchestration
-- [LangChain](https://langchain.com/) - LLM framework
-- [SQLite](https://www.sqlite.org/) - Embedded database
-- [Marked.js](https://marked.js.org/) - Markdown rendering
-
-Special thanks to all LLM providers for making their APIs accessible.
-
----
-
-## 📞 Support & Community
-
-- **GitHub Issues**: Report bugs or request features
-- **Discussions**: Ask questions, share ideas
-- **API Documentation**: http://localhost:8000/docs
-- **Pull Requests**: Contributions welcome!
-
----
-
-**Made with ❤️ for the AI community**
-
-*Compare, debate, and discover the best AI models for your needs.*

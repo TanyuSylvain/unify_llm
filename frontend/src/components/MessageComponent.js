@@ -4,7 +4,7 @@
  */
 
 import { MarkdownRenderer } from '../utils/markdown.js';
-import { getStorage, setStorage } from '../utils/helpers.js';
+import { getStorage, setStorage, purifyContent, copyToClipboard } from '../utils/helpers.js';
 
 export class MessageComponent {
     constructor(messagesContainer) {
@@ -80,6 +80,37 @@ export class MessageComponent {
     }
 
     /**
+     * Create a copy button for assistant messages
+     * @param {string} msgId - Message ID to retrieve raw content
+     * @returns {HTMLButtonElement} Copy button element
+     */
+    createCopyButton(msgId) {
+        const btn = document.createElement('button');
+        btn.className = 'message-copy-btn';
+        btn.innerHTML = '&#128203; Copy';  // Clipboard icon + text
+        btn.setAttribute('data-tooltip', 'Clean Copy');
+
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const raw = this.messageContents.get(msgId);
+            if (!raw) return;
+
+            const success = await copyToClipboard(purifyContent(raw));
+            if (success) {
+                btn.classList.add('copied');
+                btn.innerHTML = '&#10003; Copied';
+                btn.setAttribute('data-tooltip', 'Copied!');
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.innerHTML = '&#128203; Copy';
+                    btn.setAttribute('data-tooltip', 'Clean Copy');
+                }, 2000);
+            }
+        });
+        return btn;
+    }
+
+    /**
      * Add a user message
      * @param {string} content - Message content
      * @returns {HTMLElement} Message element
@@ -100,6 +131,10 @@ export class MessageComponent {
             const msgId = messageEl.dataset.messageId || Date.now().toString() + Math.random().toString();
             messageEl.dataset.messageId = msgId;
             this.messageContents.set(msgId, content);
+            // Add copy button for non-empty content
+            if (content) {
+                messageEl.appendChild(this.createCopyButton(msgId));
+            }
         }
         return messageEl;
     }
@@ -159,6 +194,9 @@ export class MessageComponent {
         // Store raw content for re-rendering
         this.messageContents.set(msgId, content);
 
+        // Add copy button
+        messageEl.appendChild(this.createCopyButton(msgId));
+
         // Persist debate metadata for reload
         this.storeDebateMetadata(content, debateId, iteration);
 
@@ -210,6 +248,12 @@ export class MessageComponent {
             messageEl.style.whiteSpace = 'pre-wrap';
             messageEl.textContent = content;
         }
+
+        // Add copy button if content exists and button doesn't
+        if (content && msgId && !messageEl.querySelector('.message-copy-btn')) {
+            messageEl.appendChild(this.createCopyButton(msgId));
+        }
+
         this.scrollToBottom();
     }
 
@@ -252,7 +296,7 @@ export class MessageComponent {
             if (msgId && this.messageContents.has(msgId)) {
                 const content = this.messageContents.get(msgId);
 
-                // Handle debate-answer messages differently (preserve badge)
+                // Handle debate-answer messages differently (preserve badge and copy button)
                 if (messageEl.classList.contains('debate-answer')) {
                     const contentDiv = messageEl.querySelector('.message-content');
                     if (contentDiv) {
@@ -265,13 +309,17 @@ export class MessageComponent {
                         }
                     }
                 } else {
-                    // Regular assistant message
+                    // Regular assistant message - innerHTML wipes copy button, so re-add it
                     if (isMarkdown) {
                         messageEl.style.whiteSpace = '';
                         messageEl.innerHTML = this.renderer.render(content);
                     } else {
                         messageEl.style.whiteSpace = 'pre-wrap';
                         messageEl.textContent = content;
+                    }
+                    // Re-add copy button after innerHTML replacement
+                    if (content) {
+                        messageEl.appendChild(this.createCopyButton(msgId));
                     }
                 }
             }

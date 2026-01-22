@@ -725,6 +725,75 @@ body {
     /* Container for the actual message content */
 }
 
+/* Clean Copy Button */
+.message.assistant {
+    position: relative;
+}
+
+.message-copy-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    padding: 0.25rem 0.6rem;
+    min-width: 60px;
+    height: 28px;
+    border-radius: 0.25rem;
+    border: 1px solid #ddd;
+    background: white;
+    color: #666;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    opacity: 0;
+    transition: opacity 0.2s, background 0.2s;
+    z-index: 10;
+}
+
+.message.assistant:hover .message-copy-btn {
+    opacity: 1;
+}
+
+.message-copy-btn:hover {
+    background: #f0f0f0;
+}
+
+.message-copy-btn.copied {
+    background: #d4edda;
+    border-color: #28a745;
+    color: #28a745;
+}
+
+/* Copy Button Tooltip */
+.message-copy-btn::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.25rem 0.5rem;
+    background: #333;
+    color: white;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+    opacity: 0;
+    pointer-events: none;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+}
+
+.message-copy-btn:hover::after {
+    opacity: 1;
+}
+
+/* Debate message copy button adjustment */
+.message.debate-answer .message-copy-btn {
+    top: 0.3rem;
+    right: 0.3rem;
+}
+
 /* Markdown Styling in Messages */
 .message.assistant pre {
     background: #f4f4f4;
@@ -848,6 +917,7 @@ body {
     padding: 1rem;
     border-top: 1px solid #eee;
     display: flex;
+    align-items: flex-end;
     gap: 0.5rem;
     flex-shrink: 0;
     background: white;
@@ -860,6 +930,12 @@ body {
     border-radius: 1.5rem;
     font-size: 1rem;
     outline: none;
+    resize: none;
+    overflow-y: auto;
+    max-height: 150px;
+    min-height: 42px;
+    line-height: 1.4;
+    font-family: inherit;
 }
 
 #messageInput:focus {

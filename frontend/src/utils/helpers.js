@@ -103,3 +103,46 @@ export function formatTime(timestamp) {
     // Format as date
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
 }
+
+/**
+ * Purify content for clean copying
+ * Removes redundant spaces and blank lines for clean paragraphs
+ * @param {string} text - Raw text content
+ * @returns {string} Purified text
+ */
+export function purifyContent(text) {
+    if (!text) return '';
+    return text
+        .replace(/\r\n/g, '\n')              // Normalize line endings
+        .replace(/\n{3,}/g, '\n\n')          // 3+ newlines -> paragraph break
+        .replace(/([\u4e00-\u9fff])\s+([A-Za-z0-9])/g, '$1$2')  // Chinese + space + English/number
+        .replace(/([A-Za-z0-9])\s+([\u4e00-\u9fff])/g, '$1$2')  // English/number + space + Chinese
+        .replace(/([。，！？：；、》」』）】])[^\S\n]+/g, '$1')  // Remove space (not newline) after Chinese punctuation
+        .split('\n').map(l => l.trimEnd()).join('\n')  // Trim trailing whitespace only
+        .trim();
+}
+
+/**
+ * Copy text to clipboard with fallback for older browsers
+ * @param {string} text - Text to copy
+ * @returns {Promise<boolean>} Success status
+ */
+export async function copyToClipboard(text) {
+    try {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+            return true;
+        }
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.cssText = 'position:fixed;left:-9999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        const success = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        return success;
+    } catch (e) {
+        return false;
+    }
+}
