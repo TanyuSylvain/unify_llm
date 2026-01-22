@@ -40,7 +40,6 @@ echo "-----------------------------------"
 check_file "requirements.txt"
 check_file ".env.template"
 check_file "LICENSE.txt"
-check_file "README.txt"
 echo ""
 
 echo "Checking launcher scripts..."

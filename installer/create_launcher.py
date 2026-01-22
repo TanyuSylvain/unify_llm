@@ -27,7 +27,7 @@ Name=UnifyLLM
 Comment=Multi-Agent Debate System for LLM Comparison
 Exec={launcher_script}
 Icon={icon_path if icon_path.exists() else ''}
-Terminal=false
+Terminal=true
 Categories=Development;Education;Science;
 StartupNotify=true
 Keywords=AI;LLM;Chat;Agent;
@@ -81,34 +81,129 @@ Keywords=AI;LLM;Chat;Agent;
 
 
 def create_macos_launcher():
-    """Create launcher for MacOS"""
+    """Create a proper MacOS .app bundle"""
     try:
-        # For MacOS, we'll create a simple app bundle structure
+        # Determine paths
         app_dir = Path(__file__).parent.parent.resolve()
         launcher_script = app_dir / "launcher.sh"
+        icon_png = Path(__file__).parent / "icon.png"
 
-        # Create a simple shell script launcher that can be added to Dock
-        macos_launcher = Path.home() / "Desktop" / "UnifyLLM.command"
+        # Create .app bundle in /Applications
+        app_bundle = Path.home() / "Applications" / "UnifyLLM.app"
 
+        # Create directory structure
+        contents_dir = app_bundle / "Contents"
+        macos_dir = contents_dir / "MacOS"
+        resources_dir = contents_dir / "Resources"
+
+        # Remove existing app bundle if it exists
+        if app_bundle.exists():
+            shutil.rmtree(app_bundle)
+
+        # Create directories
+        macos_dir.mkdir(parents=True, exist_ok=True)
+        resources_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create Info.plist
+        info_plist = f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>UnifyLLM</string>
+    <key>CFBundleDisplayName</key>
+    <string>UnifyLLM</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.unify.llm</string>
+    <key>CFBundleVersion</key>
+    <string>1.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleSignature</key>
+    <string>????</string>
+    <key>CFBundleExecutable</key>
+    <string>UnifyLLM</string>
+    <key>CFBundleIconFile</key>
+    <string>UnifyLLM.icns</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.13</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.developer-tools</string>
+</dict>
+</plist>"""
+
+        with open(contents_dir / "Info.plist", 'w') as f:
+            f.write(info_plist)
+
+        # Create executable launcher script that opens Terminal
         launcher_content = f"""#!/bin/bash
-cd "{app_dir}"
-./launcher.sh
+# Open Terminal and run launcher.sh
+osascript -e 'tell application "Terminal"
+    do script "cd \\"{app_dir}\\" && ./launcher.sh"
+    activate
+end tell'
 """
 
-        try:
-            with open(macos_launcher, 'w') as f:
-                f.write(launcher_content)
-            # Make executable
-            os.chmod(macos_launcher, 0o755)
-            print(f"✓ Created launcher: {macos_launcher}")
-            print("  You can drag this to your Dock for easy access")
-            return True
-        except Exception as e:
-            print(f"Warning: Could not create launcher: {e}")
-            return False
+        launcher_path = macos_dir / "UnifyLLM"
+        with open(launcher_path, 'w') as f:
+            f.write(launcher_content)
+        os.chmod(launcher_path, 0o755)
+
+        # Convert PNG to ICNS if possible
+        if icon_png.exists():
+            try:
+                # Try using sips (built-in macOS tool)
+                import subprocess
+                iconset_dir = resources_dir / "UnifyLLM.iconset"
+                iconset_dir.mkdir(exist_ok=True)
+
+                # Generate different icon sizes
+                sizes = [16, 32, 64, 128, 256, 512]
+                for size in sizes:
+                    subprocess.run([
+                        'sips', '-z', str(size), str(size),
+                        str(icon_png),
+                        '--out', str(iconset_dir / f"icon_{size}x{size}.png")
+                    ], capture_output=True, timeout=10)
+
+                    # Create @2x versions
+                    if size <= 256:
+                        subprocess.run([
+                            'sips', '-z', str(size * 2), str(size * 2),
+                            str(icon_png),
+                            '--out', str(iconset_dir / f"icon_{size}x{size}@2x.png")
+                        ], capture_output=True, timeout=10)
+
+                # Convert iconset to icns
+                subprocess.run([
+                    'iconutil', '-c', 'icns',
+                    str(iconset_dir),
+                    '-o', str(resources_dir / "UnifyLLM.icns")
+                ], capture_output=True, timeout=10)
+
+                # Clean up iconset
+                shutil.rmtree(iconset_dir)
+
+            except Exception as e:
+                print(f"Warning: Could not convert icon to .icns format: {e}")
+                # Copy PNG as fallback
+                try:
+                    shutil.copy(icon_png, resources_dir / "UnifyLLM.png")
+                except:
+                    pass
+
+        print(f"✓ Created application: {app_bundle}")
+        print("  The app will appear in Launchpad shortly")
+        print("  You can also find it in ~/Applications/")
+
+        return True
 
     except Exception as e:
-        print(f"Warning: Could not create MacOS launcher: {e}")
+        print(f"Error: Could not create MacOS application: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 

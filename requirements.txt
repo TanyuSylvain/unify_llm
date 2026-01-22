@@ -23,7 +23,7 @@ sqlalchemy>=2.0.0
 aiosqlite>=0.20.0
 
 # HTTP Clients
-httpx>=0.28.0
+httpx[socks]>=0.28.0
 httpx-sse>=0.4.3
 requests>=2.32.0
 

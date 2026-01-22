@@ -166,7 +166,7 @@ echo "======================================"
 echo ""
 echo "To start UnifyLLM:"
 if [[ "$OS" == "MacOS" ]]; then
-    echo "  - Use the launcher in your Applications folder, or"
+    echo "  - Open UnifyLLM from Launchpad or ~/Applications folder, or"
 elif [[ "$OS" == "Linux" ]]; then
     echo "  - Use the desktop launcher, or"
 fi

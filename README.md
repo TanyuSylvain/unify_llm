@@ -11,27 +11,42 @@ A powerful, cross-platform application for comparing and interacting with multip
 ## 🚀 Quick Start Installation
 
 ### Windows
-1. Download and extract the Windows installer package
-2. Double-click `install.bat`
-3. Follow the on-screen instructions
-4. Configure your API keys in the GUI wizard
-5. Launch using the desktop shortcut or run `launcher.bat`
+1. Download the Windows installer package (ZIP file)
+2. Right-click the ZIP file → "Extract All..." → Choose destination
+3. Open the extracted folder
+4. Double-click `install.bat`
+5. Follow the on-screen instructions
+6. Configure your API keys in the GUI wizard
+7. Launch using the desktop shortcut or run `launcher.bat`
 
-### macOS / Linux
-1. Download and extract the installer package
-2. Open terminal in the extracted directory
-3. Run: `./install.sh`
-4. Follow the on-screen instructions
-5. Configure your API keys in the GUI wizard
-6. Launch using `./launcher.sh` or the desktop launcher
+### macOS
+1. Download the installer package (TAR.GZ file)
+2. Extract the archive: Double-click or run `tar -xzf unify_llm.tar.gz` in Terminal
+3. Open Terminal and navigate to the extracted directory: `cd unify_llm`
+4. Run: `./install.sh`
+5. Follow the on-screen instructions
+6. Configure your API keys in the GUI wizard
+7. Launch from **Launchpad** or **~/Applications/UnifyLLM.app**
+
+### Linux
+1. Download the installer package (TAR.GZ file)
+2. Extract the archive: `tar -xzf unify_llm.tar.gz`
+3. Navigate to the extracted directory: `cd unify_llm`
+4. Run: `./install.sh`
+5. Follow the on-screen instructions
+6. Configure your API keys in the GUI wizard
+7. Launch from your **Application Menu** or Desktop launcher
 
 **That's it!** The installer automatically:
 - ✅ Checks for Python 3.10+ (guides you to install if missing)
 - ✅ Creates an isolated virtual environment
-- ✅ Installs all dependencies with progress display
+- ✅ Installs all dependencies (including SOCKS proxy support)
 - ✅ Launches a GUI wizard to configure API keys
-- ✅ Creates desktop shortcuts/launchers
-- ✅ Opens the application in your browser
+- ✅ Creates native application launchers:
+  - **macOS**: UnifyLLM.app in ~/Applications (appears in Launchpad)
+  - **Linux**: Desktop entry in Application Menu
+  - **Windows**: Desktop shortcut
+- ✅ Opens the application in your browser automatically
 
 The application will be available at: **http://localhost:8080/index.html**
 
