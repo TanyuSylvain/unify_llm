@@ -141,10 +141,10 @@ class LangGraphAgent:
         messages = history.copy()
         messages.append({"role": "user", "content": question})
 
-        # Stream the response
+        # Stream the response using async streaming
         full_response = ""
         try:
-            for chunk in self.llm.stream(messages):
+            async for chunk in self.llm.astream(messages):
                 if hasattr(chunk, 'content'):
                     content = chunk.content
                     if content:
