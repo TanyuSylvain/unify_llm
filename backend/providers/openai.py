@@ -19,6 +19,12 @@ class OpenAIProvider(BaseLLMProvider):
                 "description": "Most capable GPT-5 model",
                 "support_thinking": False
             },
+            {
+                "id": "gpt-5.2-chat",
+                "name": "GPT-5.2 Chat",
+                "description": "Most capable GPT-5 chat/instruct model",
+                "support_thinking": False
+            },
         ]
 
     def get_provider_name(self) -> str:
@@ -56,5 +62,6 @@ class OpenAIProvider(BaseLLMProvider):
             api_key=validated_key,
             base_url=base_url,
             temperature=temperature,
-            streaming=True
+            streaming=True,
+            default_headers={"User-Agent": self.get_user_agent()}
         )

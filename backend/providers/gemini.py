@@ -18,7 +18,7 @@ class GeminiProvider(BaseLLMProvider):
                 "name": "Gemini-3-pro-preview",
                 "description": "Most powerful Gemini with thinking",
                 "supports_thinking": True,
-                "thinking_locked": True  # Cannot disable thinking
+                "thinking_locked": False
             },
             {
                 "id": "gemini-3-flash-preview",
@@ -56,18 +56,9 @@ class GeminiProvider(BaseLLMProvider):
 
         base_url = kwargs.get("base_url", "https://generativelanguage.googleapis.com/v1beta/openai")
 
-        # Build extra_body for thinking mode (Gemini 3 uses thinkingLevel)
-        extra_body = {}
-
-        # Check if model supports thinking
-        if self.supports_thinking(validated_model):
-            # Check if thinking is locked (always on)
-            if self.is_thinking_locked(validated_model):
-                # Gemini 3 Pro: thinking always on, use high level
-                extra_body["thinkingLevel"] = "high"
-            else:
-                # Gemini 3 Flash: can toggle thinking
-                extra_body["thinkingLevel"] = "high" if thinking else "minimal"
+        reason_eft = 'minimal' if 'flash' in model_id else 'low'
+        if thinking:
+            reason_eft = 'high'
 
         return ChatOpenAI(
             model=validated_model,
@@ -75,5 +66,6 @@ class GeminiProvider(BaseLLMProvider):
             base_url=base_url,
             temperature=temperature,
             streaming=True,
-            extra_body=extra_body if extra_body else None
+            reasoning_effort=reason_eft,
+            default_headers={"User-Agent": self.get_user_agent()}
         )

@@ -2,6 +2,7 @@
 Base class for LLM providers.
 """
 
+import platform
 from abc import ABC, abstractmethod
 from typing import Optional, List, Dict
 
@@ -104,3 +105,15 @@ class BaseLLMProvider(ABC):
             if model.get('id') == model_id and model.get('thinking_locked', False):
                 return True
         return False
+
+    def get_user_agent(self) -> str:
+        """
+        Generate a standard user-agent string for API requests.
+
+        Returns:
+            User-agent string in standard format
+        """
+        system = platform.system()
+        release = platform.release()
+        python_version = platform.python_version()
+        return f"UnifyLLM/1.0 ({system} {release}; Python/{python_version})"

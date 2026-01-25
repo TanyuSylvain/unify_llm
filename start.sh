@@ -11,11 +11,11 @@ cleanup() {
 trap cleanup SIGINT SIGTERM
 
 echo "Starting backend server on port 8000..."
-python3 -m backend.main &
+python -m backend.main &
 BACKEND_PID=$!
 
 echo "Starting frontend server on port 8080..."
-python3 -m http.server 8080 --directory frontend/src &
+python -m http.server 8080 --directory frontend/src &
 FRONTEND_PID=$!
 
 echo ""
