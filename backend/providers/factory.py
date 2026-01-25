@@ -84,8 +84,7 @@ class ProviderFactory:
             "name": provider.get_provider_name(),
             "provider_id": provider_name,
             "models": provider.get_available_models(),
-            "supports_streaming": provider.supports_streaming(),
-            "supports_thinking": provider.supports_thinking()
+            "supports_streaming": provider.supports_streaming()
         }
 
     @staticmethod
