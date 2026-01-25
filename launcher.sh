@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 
 # Detect Python command
 if command -v python &> /dev/null; then
-    PYTHON_VERSION=$(python --version 2>&1 | grep -oP '(?<=Python )\d+' | head -1)
+    PYTHON_VERSION=$(python --version 2>&1 | cut -d' ' -f2 | cut -d'.' -f1)
     if [ "$PYTHON_VERSION" -eq 3 ]; then
         PYTHON_CMD="python"
     else
